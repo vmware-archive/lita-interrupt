@@ -8,4 +8,21 @@ This bot can find your interrupt pair by talking to the trello API. It requires 
 
 Right now an environment variable is read in which links trello usernames and slack ids. To find out your slack id, talk to an instance of the lita bot and say `users find mention_name`.
 
+# cf deploy
+
+To deploy to cloud foundry, you have to create and bind a `rediscloud` service to the app, and set a few environment variables:
+
+```
+cf set-env interrupt ROBOT_NAME 'robot name'
+cf set-env interrupt ROBOT_MENTION_NAME 'robot mention name'
+cf set-env interrupt ROBOT_LOG_LEVEL 'info'
+cf set-env interrupt ROBOT_ADAPTER 'slack'
+cf set-env interrupt ROBOT_ADMINS 'admin1_slack_id,admin2_slack_id'
+cf set-env interrupt ADAPTERS_SLACK_TOKEN 'adapters_slack_token'
+cf set-env interrupt TEAM_MEMBERS_HASH 'team_member1_trello_username:team_member1_trello_slack_id,team_member2_trello_username:team_member2_trello_slack_id'
+cf set-env interrupt TRELLO_DEVELOPER_PUBLIC_KEY 'trello_developer_public_key'
+cf set-env interrupt TRELLO_MEMBER_TOKEN 'trello_member_token'
+cf set-env interrupt TRELLO_BOARD_ID 'trello_board_id'
+```
+
 TODO: keep hash of team member information stored in a database and allow users to register with the bot by talking to it.

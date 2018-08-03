@@ -21,7 +21,7 @@ module Lita
         c.member_token = ENV['TRELLO_MEMBER_TOKEN']
       end
 
-      board_id = ENV['TRELLO_BAM_BOARD_ID']
+      board_id = ENV['TRELLO_BOARD_ID']
 
       # if board_id.nil?
 

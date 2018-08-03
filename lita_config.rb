@@ -32,8 +32,15 @@ Lita.configure do |config|
   # config.adapter.password = "secret"
 
   ## Example: Set options for the Redis connection.
-  config.redis.host = ENV['REDIS_HOST']
-  config.redis.port = ENV['REDIS_PORT'].to_i
+  if rediscloud_service = JSON.parse(ENV['VCAP_SERVICES'])["rediscloud"] then
+    credentials = rediscloud_service.first["credentials"]
+    config.redis[:host] = credentials["hostname"]
+    config.redis[:port] = credentials["port"]
+    config.redis[:password] = credentials["password"]
+  else
+    config.redis[:host] = ENV['REDIS_HOST']
+    config.redis[:port] = ENV['REDIS_PORT'].to_i
+  end
 
   ## Example: Set configuration for any loaded handlers. See the handler's
   ## documentation for options.
