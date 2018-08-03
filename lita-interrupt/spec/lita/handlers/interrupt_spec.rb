@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Lita::Handlers::Cf, lita_handler: true do
+describe Lita::Handlers::Interrupt, lita_handler: true do
   describe '#run' do
     it { is_expected.to route_command('hey').to(:handle_interrupt) }
 

@@ -5,7 +5,7 @@ require 'lita-exclusive-route'
 module Lita
   module Handlers
     # a handler
-    class Cf < Handler
+    class Interrupt < Handler
       @@team_members = {}
       # TEAM_MEMBER_HASH should look like "trello_name1:slack_handle1,trello_name2:slack_handle2"
       # temporary workaround since this cannot be read as a hash

@@ -3,8 +3,8 @@ Gem::Specification.new do |spec|
   spec.version       = "0.1.0"
   spec.authors       = ["Oliver Albertini"]
   spec.email         = ["oalbertini@pivotal.io"]
-  spec.description   = "Run cf commands from slack"
-  spec.summary       = "Run cf commands from slack"
+  spec.description   = "Interrupt the right people on slack"
+  spec.summary       = "Talks to the trello api to find out who to interrupt, then pings them on slack."
   spec.homepage      = "http://example.com"
   spec.license       = "none"
   spec.metadata      = { "lita_plugin_type" => "handler" }
