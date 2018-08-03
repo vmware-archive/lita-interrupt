@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 gem "lita"
 gem "lita-slack"
-gem "lita-cf", :path => "lita-cf"
+gem "lita-interrupt", :path => "lita-interrupt"
 gem 'pry-byebug'
 gem 'rspec'
 

@@ -1,5 +1,5 @@
 Gem::Specification.new do |spec|
-  spec.name          = "lita-cf"
+  spec.name          = "lita-interrupt"
   spec.version       = "0.1.0"
   spec.authors       = ["Oliver Albertini"]
   spec.email         = ["oalbertini@pivotal.io"]
