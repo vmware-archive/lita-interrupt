@@ -4,67 +4,57 @@ require 'trello'
 require 'lita-exclusive-route'
 module Lita
   module Handlers
-    # a handler
     class Interrupt < Handler
+      on :connected, :get_interrupt_list
+      route(%r{add (.*) to BAM}, :add_to_team, command: true)
+      route(%r{^(.+)$}, :handle_interrupt, command: true, exclusive: true)
+
+      Trello.configure do |c|
+        c.developer_public_key = ENV['TRELLO_DEVELOPER_PUBLIC_KEY'] or raise 'TRELLO_DEVELOPER_PUBLIC_KEY must be set'
+        c.member_token = ENV['TRELLO_MEMBER_TOKEN'] or raise 'TRELLO_MEMBER_TOKEN must be set'
+      end
+
       @@team_members = {}
       # TEAM_MEMBER_HASH should look like "trello_name1:slack_handle1,trello_name2:slack_handle2"
-      # temporary workaround since this cannot be read as a hash
-      # TODO make this go in a DB
+      # TODO make this go in a DB and allow members to add/remove themselves by talking to bot in slack
       ENV['TEAM_MEMBERS_HASH'].split(',').each do |pair|
-          names = pair.split(':')
-          @@team_members[names[0]] = names[1]
+        names = pair.split(':')
+        @@team_members[names[0]] = names[1]
       end
+      raise 'TEAM_MEMBERS_HASH must be set.' if @@team_members.empty?
 
-      Lita.register_handler(self)
-      Trello.configure do |c|
-        c.developer_public_key = ENV['TRELLO_DEVELOPER_PUBLIC_KEY']
-        c.member_token = ENV['TRELLO_MEMBER_TOKEN']
-      end
-
-      board_id = ENV['TRELLO_BOARD_ID']
-
-      # if board_id.nil?
-
-      @@interrupt_list = nil
-      Trello::Board.find(board_id).lists.each do |list|
-        break_flag = false
-        Trello::List.find(list.id).cards.each do |card|
-          if card.name == 'Interrupt'
-            @@interrupt_list = list.id
-            break_flag = true
-            break
+      def get_interrupt_list(payload)
+        board_name = ENV['TRELLO_BOARD_NAME'] or raise 'TRELLO_BOARD_NAME must be set.'
+        team_board = nil
+        @@team_members.each do |trello_username, _|
+          member = Trello::Member.find(trello_username)
+          break if team_board = member.boards.find do |board|
+            board.name == board_name
           end
-          break if break_flag
         end
-      end
+        raise 'Team board not found!' unless team_board
 
-      route(/^echo\s+(.+)/,
-            command: true,
-            help: { 'echo TEXT' => 'Replies back with TEXT.' }) do |response|
-        response.reply(response.match_data[1].to_s)
+        @@interrupt_list = nil
+        team_board.lists.each do |list|
+          break_flag = false
+          Trello::List.find(list.id).cards.each do |card|
+            if card.name == 'Interrupt'
+              @@interrupt_list = list
+              break_flag = true
+              break
+            end
+            break if break_flag
+          end
+        end
+        raise %q(
+              Interrupt list not found!
+              Your team trello board needs a list with a card titled 'Interrupt'!
+        ) unless @@interrupt_list
       end
-
-      # route(/^cf\s+(\bhelp\b|\bh\b|\bapps\b|\bservices\b|\bspaces\b|\borgs\b|\bo\b|\broutes\b|\br\b|\bmarketplace\b|\bdomains\b|\bspace-users\b|\borg-users\b)/, command: true) do |response|
-      route(/^cf\s+(.+)/, command: true) do |response|
-        cf_script = '/Users/pivotal/workspace/lita/lita-cf/lib/lita/scripts/cf_apps.sh'
-        apps = `#{cf_script} #{response.args[0..-1].join(' ')}`
-        response.reply("```#{apps}```")
-      end
-
-      route(/^blahblah$/, command: false) do |response|
-        response.reply('hey, blah blah to you')
-      end
-
-      route(%r{^.*salesforce.com\/.*$}, command: false) do
-        p 'someone just said salesforce'
-      end
-
-      # target = Source.new(room: response.room)
-      # robot.set_topic(target, 'hey there')
 
       def interrupt_pair
         interrupt_ids = []
-        Trello::List.find(@@interrupt_list).cards.each do |card|
+        @@interrupt_list.cards.each do |card|
           card.member_ids.each do |member|
             username = Trello::Member.find(member).username
             interrupt_ids << @@team_members[username]
@@ -85,11 +75,11 @@ module Lita
 
       def add_to_team(response)
         new_member = Trello::Member.find(response.match_data[1].to_s)
+        # TODO: update @@team_members and persist it somehow
         response.reply(%Q(I have linked trello user '#{new_member.username}' with <@#{response.user.id}>!))
       end
 
-      route(%r{add (.*) to BAM}, :add_to_team, command: true)
-      route(%r{^(.+)$}, :handle_interrupt, command: true, exclusive: true)
+      Lita.register_handler(self)
     end
   end
 end

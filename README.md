@@ -22,7 +22,7 @@ cf set-env interrupt ADAPTERS_SLACK_TOKEN 'adapters_slack_token'
 cf set-env interrupt TEAM_MEMBERS_HASH 'team_member1_trello_username:team_member1_trello_slack_id,team_member2_trello_username:team_member2_trello_slack_id'
 cf set-env interrupt TRELLO_DEVELOPER_PUBLIC_KEY 'trello_developer_public_key'
 cf set-env interrupt TRELLO_MEMBER_TOKEN 'trello_member_token'
-cf set-env interrupt TRELLO_BOARD_ID 'trello_board_id'
+cf set-env interrupt TRELLO_BOARD_NAME 'trello_board_name'
 ```
 
 TODO: keep hash of team member information stored in a database and allow users to register with the bot by talking to it.
