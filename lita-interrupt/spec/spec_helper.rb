@@ -76,48 +76,51 @@ def board_details
     organization_id: 'abcdef123456789123456789'
   }
 end
-def card_details_array
-  [
-    {
-      name:                   'Interrupt',
-      list_id:                'abcdef123456789123456789',
-      desc:                   'This is the interrupt card',
-      member_ids:             [],
-      card_labels:            [ 'abcdef123456789123456789',
-                                'bbcdef123456789123456789',
-                                'cbcdef123456789123456789',
-                                'dbcdef123456789123456789' ],
-                                due:                    Date.today,
-                                pos:                    12,
-                                source_card_id:         'abcdef1234567891234567890',
-                                source_card_properties: 'checklist,members'
-    },
-    {
-      name:                   'Tyrion Lannister',
-      list_id:                'abcdef123456789123456789',
-      desc:                   'Tyrion Lannister personal card.',
-      member_ids:             ['tyrionlannister'],
-      card_labels:            [ 'abcdef123456789123456789',
-                                'bbcdef123456789123456789',
-                                'cbcdef123456789123456789',
-                                'dbcdef123456789123456789' ],
-                                due:                    Date.today,
-                                pos:                    12,
-                                source_card_id:         'abcdef1234567891234567890',
-                                source_card_properties: 'checklist,members'
-    },
-    {
-      name:                   'Jaime Lannister',
-      list_id:                'abcdef123456789123456789',
-      desc:                   'Jaime Lannister personal card.',
-      member_ids:             ['jaimelannister'],
-      card_labels:            [ 'abcdef123456789123456789',
-                                'bbcdef123456789123456789',
-                                'cbcdef123456789123456789',
-                                'dbcdef123456789123456789' ],
-                                due:                    Date.today,
-                                pos:                    12,
-                                source_card_id:         'abcdef1234567891234567890',
-                                source_card_properties: 'checklist,members'
-    }]
+def interrupt_card_details
+  {
+    name:                   'Interrupt',
+    list_id:                'abcdef123456789123456789',
+    desc:                   'This is the interrupt card',
+    member_ids:             [],
+    card_labels:            [ 'abcdef123456789123456789',
+                              'bbcdef123456789123456789',
+                              'cbcdef123456789123456789',
+                              'dbcdef123456789123456789' ],
+                              due:                    Date.today,
+                              pos:                    12,
+                              source_card_id:         'abcdef1234567891234567890',
+                              source_card_properties: 'checklist,members'
+  }
+end
+def tyrion_card_details
+  {
+    name:                   'Tyrion Lannister',
+    list_id:                'abcdef123456789123456789',
+    desc:                   'Tyrion Lannister personal card.',
+    member_ids:             ['tyrionlannister'],
+    card_labels:            [ 'abcdef123456789123456789',
+                              'bbcdef123456789123456789',
+                              'cbcdef123456789123456789',
+                              'dbcdef123456789123456789' ],
+                              due:                    Date.today,
+                              pos:                    12,
+                              source_card_id:         'abcdef1234567891234567890',
+                              source_card_properties: 'checklist,members'
+  }
+end
+def jaime_card_details
+  {
+    name:                   'Jaime Lannister',
+    list_id:                'abcdef123456789123456789',
+    desc:                   'Jaime Lannister personal card.',
+    member_ids:             ['jaimelannister'],
+    card_labels:            [ 'abcdef123456789123456789',
+                              'bbcdef123456789123456789',
+                              'cbcdef123456789123456789',
+                              'dbcdef123456789123456789' ],
+                              due:                    Date.today,
+                              pos:                    12,
+                              source_card_id:         'abcdef1234567891234567890',
+                              source_card_properties: 'checklist,members'
+  }
 end

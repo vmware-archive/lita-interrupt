@@ -19,9 +19,9 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       allow(list)
         .to receive(:cards)
         .and_return([
-      Trello::Card.new(card_details_array[0]),
-      Trello::Card.new(card_details_array[1]),
-      Trello::Card.new(card_details_array[2])
+          Trello::Card.new(interrupt_card_details),
+          Trello::Card.new(tyrion_card_details),
+          Trello::Card.new(jaime_card_details)
       ])
     end
 
@@ -44,24 +44,24 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         allow(list)
           .to receive(:cards)
           .and_return([
-        Trello::Card.new(card_details_array[1]),
-        Trello::Card.new(card_details_array[2])
+            Trello::Card.new(tyrion_card_details),
+            Trello::Card.new(jaime_card_details)
         ])
       end
       it 'raises an error' do
         expect { robot.trigger(:connected) }.to raise_error(%q(
               Interrupt list not found!
               Your team trello board needs a list with a card titled 'Interrupt'!
-                                                            ))
+        ))
       end
     end
 
-    describe 'when there is no interrupt list' do
+    describe 'when there is nobody on the interrupt list' do
       before do
         allow(list)
           .to receive(:cards)
           .and_return([
-        Trello::Card.new(card_details_array[0])
+            Trello::Card.new(interrupt_card_details)
         ])
         robot.trigger(:connected)
       end
