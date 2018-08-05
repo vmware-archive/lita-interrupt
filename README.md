@@ -4,9 +4,9 @@ This is a plugin for the Ruby bot [Lita](https://www.lita.io/) which can be used
 
 ## Usage
 
-This bot can find your interrupt pair by talking to the trello API. It requires a trello API key from someone with access to the team trello board. Simply add the interrupt engineers to a list containing a card titled 'Interrupt'.
+This bot can find your interrupt pair by talking to the trello API. It requires a trello API key from someone with access to the team trello board. Simply add the interrupt engineers to a list containing a card titled 'Interrupt'. Also, the card that represents a team member should have the trello 'Member' associated with it (initials will appear at the bottom-right of the card).
 
-Right now an environment variable is read in which links trello usernames and slack ids. To find out your slack id, talk to an instance of the lita bot and say `users find mention_name`.
+Right now an environment variable links trello usernames to slack ids. To find out your slack id, talk to an instance of the lita bot and say `users find mention_name`.
 
 # cf deploy
 
