@@ -2,6 +2,8 @@ require 'spec_helper'
 
 describe Lita::Handlers::Interrupt, lita_handler: true do
   describe '#run' do
+    let(:robot) { Lita::Robot.new(registry) }
+    subject { described_class.new(robot) }
     let(:maester) { Lita::User.create('U9298ANLQ', name: 'maester_luwin') }
     let(:sam) { Lita::User.create('U93MFAV9V', name: 'sam') }
     let(:jon) { Lita::User.create('U1BSCLVQ1', name: 'jon') }
@@ -9,6 +11,12 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     let(:jaime) { Lita::User.create('U8FE4C6Z7', name: 'jaime') }
     let(:list) { Trello::List.new(list_details) }
     before do
+      registry.configure do |config|
+        config.handlers.interrupt.trello_developer_public_key = ENV['TRELLO_DEVELOPER_PUBLIC_KEY']
+        config.handlers.interrupt.trello_member_token = ENV['TRELLO_MEMBER_TOKEN']
+        config.handlers.interrupt.board_name = ENV['TRELLO_BOARD_NAME']
+        config.handlers.interrupt.team_members_hash = ENV['TEAM_MEMBERS_HASH']
+      end
       allow(Trello::Member).to receive(:find).with('jonsnow').and_return(Trello::Member.new(jon_details))
       allow(Trello::Member).to receive(:find).with('samwelltarley').and_return(Trello::Member.new(sam_details))
       allow(Trello::Member).to receive(:find).with('jaimelannister').and_return(Trello::Member.new(jaime_details))

@@ -5,26 +5,45 @@ require 'lita-exclusive-route'
 module Lita
   module Handlers
     class Interrupt < Handler
-      on :connected, :get_interrupt_list
+      on :connected, :set_up_interrupt_handler
+      config :trello_developer_public_key, required: true, type: String
+      config :trello_member_token, required: true, type: String
+      config :board_name, required: true, type: String
+      config :team_members_hash, required: true, type: String
+
       route(%r{add (.*) to BAM}, :add_to_team, command: true)
       route(%r{^(.+)$}, :handle_interrupt, command: true, exclusive: true)
 
-      Trello.configure do |c|
-        c.developer_public_key = ENV['TRELLO_DEVELOPER_PUBLIC_KEY'] or raise 'TRELLO_DEVELOPER_PUBLIC_KEY must be set'
-        c.member_token = ENV['TRELLO_MEMBER_TOKEN'] or raise 'TRELLO_MEMBER_TOKEN must be set'
+      def set_up_interrupt_handler(payload)
+        puts "outside"
+        puts config.trello_developer_public_key
+        configure_trello
+        set_team_member_hash
+        get_interrupt_list
       end
 
-      @@team_members = {}
-      # TEAM_MEMBER_HASH should look like "trello_name1:slack_handle1,trello_name2:slack_handle2"
-      # TODO make this go in a DB and allow members to add/remove themselves by talking to bot in slack
-      ENV['TEAM_MEMBERS_HASH'].split(',').each do |pair|
-        names = pair.split(':')
-        @@team_members[names[0]] = names[1]
+      def configure_trello
+        puts "inside"
+        puts config.trello_developer_public_key
+        Trello.configure do |c|
+          c.developer_public_key = config.trello_developer_public_key
+          c.member_token = config.trello_member_token
+        end
       end
-      raise 'TEAM_MEMBERS_HASH must be set.' if @@team_members.empty?
 
-      def get_interrupt_list(payload)
-        board_name = ENV['TRELLO_BOARD_NAME'] or raise 'TRELLO_BOARD_NAME must be set.'
+      def set_team_member_hash
+        @@team_members = {}
+        # TEAM_MEMBER_HASH should look like "trello_name1:slack_handle1,trello_name2:slack_handle2"
+        # TODO make this go in a DB and allow members to add/remove themselves by talking to bot in slack
+        ENV['TEAM_MEMBERS_HASH'].split(',').each do |pair|
+          names = pair.split(':')
+          @@team_members[names[0]] = names[1]
+        end
+        raise 'TEAM_MEMBERS_HASH must be set correctly.' if @@team_members.empty?
+      end
+
+      def get_interrupt_list
+        board_name = config.board_name
         team_board = nil
         @@team_members.each do |trello_username, _|
           member = Trello::Member.find(trello_username)
