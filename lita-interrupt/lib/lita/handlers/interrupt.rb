@@ -12,19 +12,16 @@ module Lita
       config :team_members_hash, required: true, type: String
 
       route(%r{add (.*) to BAM}, :add_to_team, command: true)
+      route(%r{^(.+)@#{ENV['ROBOT_NAME']}(.+)$}, :handle_interrupt, command: false)
       route(%r{^(.+)$}, :handle_interrupt, command: true, exclusive: true)
 
       def set_up_interrupt_handler(payload)
-        puts "outside"
-        puts config.trello_developer_public_key
         configure_trello
         set_team_member_hash
         get_interrupt_list
       end
 
       def configure_trello
-        puts "inside"
-        puts config.trello_developer_public_key
         Trello.configure do |c|
           c.developer_public_key = config.trello_developer_public_key
           c.member_token = config.trello_member_token
@@ -35,7 +32,7 @@ module Lita
         @@team_members = {}
         # TEAM_MEMBER_HASH should look like "trello_name1:slack_handle1,trello_name2:slack_handle2"
         # TODO make this go in a DB and allow members to add/remove themselves by talking to bot in slack
-        ENV['TEAM_MEMBERS_HASH'].split(',').each do |pair|
+        config.team_members_hash.split(',').each do |pair|
           names = pair.split(':')
           @@team_members[names[0]] = names[1]
         end
@@ -72,6 +69,7 @@ module Lita
       end
 
       def interrupt_pair
+        get_interrupt_list unless @@interrupt_list.cards.find { |card| card.name == 'Interrupt' }
         interrupt_ids = []
         @@interrupt_list.cards.each do |card|
           card.member_ids.each do |member|

@@ -1,8 +1,3 @@
-ENV['TEAM_MEMBERS_HASH'] = "jonsnow:U1BSCLVQ1,samwelltarley:U93MFAV9V,tyrionlannister:U5062MBLE,jaimelannister:U8FE4C6Z7"
-ENV['TRELLO_DEVELOPER_PUBLIC_KEY'] = 'some_public_key'
-ENV['TRELLO_MEMBER_TOKEN'] = 'some_member_token'
-ENV['TRELLO_BOARD_NAME'] = 'Game of Boards'
-
 require "lita-interrupt"
 require "lita/rspec"
 
