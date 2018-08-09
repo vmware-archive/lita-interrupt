@@ -12,8 +12,8 @@ module Lita
       config :team_members_hash, required: true, type: String
 
       route(%r{add (.*) to BAM}, :add_to_team, command: true)
-      route(%r{^(.+)@#{ENV['ROBOT_NAME']}(.+)$}, :handle_interrupt, command: false)
-      route(%r{^(.+)$}, :handle_interrupt, command: true, exclusive: true)
+      route(%r{^(.*)@#{ENV['ROBOT_NAME']}(.*)$}, :handle_interrupt, command: false)
+      route(%r{^(.*)$}, :handle_interrupt, command: true, exclusive: true)
 
       def set_up_interrupt_handler(payload)
         configure_trello

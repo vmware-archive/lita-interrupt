@@ -98,7 +98,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
 
       it 'pings the interrupt pair' do
-        send_message("hey hey hey <@#{robot.name}>", as: maester)
+        send_message("hey hey hey <@#{robot.name}> hello", as: maester)
         expect(replies.last).to eq("<@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
       end
     end
