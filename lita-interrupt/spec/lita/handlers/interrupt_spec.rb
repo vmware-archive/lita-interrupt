@@ -85,7 +85,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     describe 'when the bot is mentioned but not commanded' do
       it 'pings the interrupt pair' do
-        send_message("hey hey hey <@#{robot.name}> hello", as: maester)
+        send_message("hey hey hey @#{robot.name} hello", as: maester)
         expect(replies.last).to eq("<@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
       end
     end

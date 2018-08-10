@@ -12,8 +12,8 @@ module Lita
 
       route(%r{add (.*) to BAM}, :add_to_team, command: true)
       # route(%r{part}, :leave_room, command: true)
-      route(%r{^(.*)@#{Lita.config.robot.name}(.*)$}, :handle_interrupt, command: false, exclusive: true)
       route(%r{^(.*)$}, :handle_interrupt, command: true, exclusive: true)
+      route(%r{^(.*)@(\S+)\s*(.*)$}, :handle_mention, command: false)
 
       def initialize(robot)
         super
@@ -80,6 +80,11 @@ module Lita
           end
         end
         interrupt_ids.empty? ? @team_members.map { |_, val| val } : interrupt_ids
+      end
+
+      def handle_mention(response)
+        matches = response.matches[0]
+        handle_interrupt(response) if matches[1] == robot.name
       end
 
       def handle_interrupt(response)

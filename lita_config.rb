@@ -15,7 +15,8 @@ Lita.configure do |config|
 
   config.adapters.slack.token = ENV['ADAPTERS_SLACK_TOKEN']
 
-  if rediscloud_service = JSON.parse(ENV['VCAP_SERVICES'])["rediscloud"] then
+  if vcap_services = ENV['VCAP_SERVICES'] then
+    rediscloud_service = JSON.parse(vcap_services)["rediscloud"]
     credentials = rediscloud_service.first["credentials"]
     config.redis[:host] = credentials["hostname"]
     config.redis[:port] = credentials["port"]
