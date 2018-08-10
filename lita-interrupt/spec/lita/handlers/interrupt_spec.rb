@@ -2,8 +2,6 @@ require 'spec_helper'
 
 describe Lita::Handlers::Interrupt, lita_handler: true do
   describe '#run' do
-    let(:robot) { Lita::Robot.new(registry) }
-    subject { described_class.new(robot) }
     let(:maester) { Lita::User.create('U9298ANLQ', name: 'maester_luwin') }
     let(:sam) { Lita::User.create('U93MFAV9V', name: 'sam') }
     let(:jon) { Lita::User.create('U1BSCLVQ1', name: 'jon') }
@@ -39,7 +37,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       # describe 'and the interrupt list does not contain the interrupt card' do
         # before do
           # allow(list).to receive(:cards).and_return([ tyrion_card, jaime_card ])
-					# robot.trigger(:connected)
         # end
 
         # it 'finds the interrupt list again' do
@@ -52,7 +49,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       describe 'and the interrupt list contains the interrupt card' do
         before do
           allow(list).to receive(:cards).and_return([ interrupt_card, tyrion_card, jaime_card ])
-					robot.trigger(:connected)
         end
 
         it 'pings the interrupt pair only' do
@@ -67,7 +63,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         allow(list).to receive(:cards).and_return([ tyrion_card, jaime_card ])
       end
       it 'raises an error' do
-        expect { robot.trigger(:connected) }.to raise_error(%q(
+        expect { subject.trigger(:initialize) }.to raise_error(%q(
               Interrupt list not found!
               Your team trello board needs a list with a card titled 'Interrupt'!
         ))
@@ -77,7 +73,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     describe 'when there is nobody on the interrupt list' do
       before do
         allow(list).to receive(:cards).and_return([ interrupt_card ])
-        robot.trigger(:connected)
       end
       it 'pings the whole team' do
         send_command('hello hello hello', as: maester)
@@ -94,7 +89,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     describe 'when the bot is mentioned but not commanded' do
       before do
         allow(list).to receive(:cards).and_return([ interrupt_card, tyrion_card, jaime_card ])
-        robot.trigger(:connected)
       end
 
       it 'pings the interrupt pair' do
