@@ -13,7 +13,7 @@ module Lita
       route(%r{add (.*) to BAM}, :add_to_team, command: true)
       # route(%r{part}, :leave_room, command: true)
       route(%r{^(.*)$}, :handle_interrupt, command: true, exclusive: true)
-      route(%r{^(.*)@(\S+)\s*(.*)$}, :handle_mention, command: false)
+      route(%r{^(.*)@(\S+)\s*(.*)$}, :handle_mention, command: false, exclusive: true)
 
       def initialize(robot)
         super
