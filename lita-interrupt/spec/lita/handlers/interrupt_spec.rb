@@ -50,6 +50,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         it 'pings the interrupt pair only' do
           send_command('hello hello hello', as: maester)
           expect(replies.last).to eq("<@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
+          expect(replies.length).to eq(1)
         end
       end
     end
@@ -73,6 +74,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       it 'pings the whole team' do
         send_command('hello hello hello', as: maester)
         expect(replies.last).to eq("<@#{jon.id}> <@#{sam.id}> <@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
+        expect(replies.length).to eq(1)
       end
     end
 
@@ -80,6 +82,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       it 'adds them' do
         send_command('add samwelltarley to BAM', as: sam)
         expect(replies.last).to eq(%Q(I have linked trello user 'samwelltarley' with <@#{sam.id}>!))
+        expect(replies.length).to eq(1)
       end
     end
 
@@ -87,6 +90,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       it 'pings the interrupt pair' do
         send_message("hey hey hey @#{robot.name} hello", as: maester)
         expect(replies.last).to eq("<@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
+        expect(replies.length).to eq(1)
       end
     end
   end
