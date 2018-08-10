@@ -8,6 +8,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     let(:tyrion) { Lita::User.create('U5062MBLE', name: 'tyrion') }
     let(:jaime) { Lita::User.create('U8FE4C6Z7', name: 'jaime') }
     let(:list) { Trello::List.new(list_details) }
+    let(:list_with_interrupt_card) { Trello::List.new(list_details) }
     let(:interrupt_card) { Trello::Card.new(interrupt_card_details) }
     let(:jaime_card) { Trello::Card.new(jaime_card_details) }
     let(:tyrion_card) { Trello::Card.new(tyrion_card_details) }
@@ -23,9 +24,11 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       allow(Trello::Member).to receive(:find).with('jaimelannister').and_return(Trello::Member.new(jaime_details))
       allow(Trello::Member).to receive(:find).with('tyrionlannister').and_return(Trello::Member.new(tyrion_details))
       allow_any_instance_of(Trello::Member).to receive(:boards).and_return([Trello::Board.new(name: 'Game of Boards')])
-      allow_any_instance_of(Trello::Board).to receive(:lists).and_return([list])
+      allow_any_instance_of(Trello::Board).to receive(:lists).and_return([list, list_with_interrupt_card])
       allow(Trello::List).to receive(:find).with(list.id).and_return(list)
-      allow(list).to receive(:cards).and_return([ interrupt_card, tyrion_card, jaime_card ])
+      allow(Trello::List).to receive(:find).with(list_with_interrupt_card.id).and_return(list_with_interrupt_card)
+      allow(list).to receive(:cards).and_return([ tyrion_card, jaime_card ])
+      allow(list_with_interrupt_card).to receive(:cards).and_return([ interrupt_card, tyrion_card, jaime_card ])
     end
 
     it 'routes the command' do
@@ -33,24 +36,17 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     end
 
     describe 'when tyrion & jaime are the interrupt pair' do
-
-      # describe 'and the interrupt list does not contain the interrupt card' do
-        # before do
-          # allow(list).to receive(:cards).and_return([ tyrion_card, jaime_card ])
-        # end
-
-        # it 'finds the interrupt list again' do
-          # expect(subject).to receive(:get_interrupt_list)
-          # send_command('hello hello hello', as: maester)
-          # expect(replies.last).to eq("<@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
-        # end
-      # end
+      describe 'and the interrupt card has moved to another list' do
+        before do
+          subject.instance_variable_set(:@interrupt_list, list)
+        end
+        it 'finds the interrupt list again' do
+          expect(subject).to receive(:get_interrupt_list)
+          subject.interrupt_pair
+        end
+      end
 
       describe 'and the interrupt list contains the interrupt card' do
-        before do
-          allow(list).to receive(:cards).and_return([ interrupt_card, tyrion_card, jaime_card ])
-        end
-
         it 'pings the interrupt pair only' do
           send_command('hello hello hello', as: maester)
           expect(replies.last).to eq("<@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
@@ -60,10 +56,10 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     describe 'when there is no interrupt list' do
       before do
-        allow(list).to receive(:cards).and_return([ tyrion_card, jaime_card ])
+        allow_any_instance_of(Trello::List).to receive(:cards).and_return([tyrion_card])
       end
       it 'raises an error' do
-        expect { subject.trigger(:initialize) }.to raise_error(%q(
+        expect { described_class.new(robot) }.to raise_error(%q(
               Interrupt list not found!
               Your team trello board needs a list with a card titled 'Interrupt'!
         ))
@@ -72,7 +68,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     describe 'when there is nobody on the interrupt list' do
       before do
-        allow(list).to receive(:cards).and_return([ interrupt_card ])
+        allow(list_with_interrupt_card).to receive(:cards).and_return([ interrupt_card ])
       end
       it 'pings the whole team' do
         send_command('hello hello hello', as: maester)
@@ -86,11 +82,8 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         expect(replies.last).to eq(%Q(I have linked trello user 'samwelltarley' with <@#{sam.id}>!))
       end
     end
-    describe 'when the bot is mentioned but not commanded' do
-      before do
-        allow(list).to receive(:cards).and_return([ interrupt_card, tyrion_card, jaime_card ])
-      end
 
+    describe 'when the bot is mentioned but not commanded' do
       it 'pings the interrupt pair' do
         send_message("hey hey hey <@#{robot.name}> hello", as: maester)
         expect(replies.last).to eq("<@#{tyrion.id}> <@#{jaime.id}>: you have an interrupt from <@#{maester.id}> ^^")
