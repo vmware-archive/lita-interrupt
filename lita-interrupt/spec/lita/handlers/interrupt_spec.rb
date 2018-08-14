@@ -18,6 +18,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         config.handlers.interrupt.trello_member_token = ''
         config.handlers.interrupt.board_name = 'Game of Boards'
         config.handlers.interrupt.team_members_hash = "jonsnow:U1BSCLVQ1,samwelltarley:U93MFAV9V,tyrionlannister:U5062MBLE,jaimelannister:U8FE4C6Z7"
+        config.handlers.interrupt.admins = [ maester ]
       end
       allow(Trello::Member).to receive(:find).with('jonsnow').and_return(Trello::Member.new(jon_details))
       allow(Trello::Member).to receive(:find).with('samwelltarley').and_return(Trello::Member.new(sam_details))
@@ -27,6 +28,12 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       allow_any_instance_of(Trello::Board).to receive(:lists).and_return([list, list_with_interrupt_card])
       allow(Trello::List).to receive(:find).with(list.id).and_return(list)
       allow(Trello::List).to receive(:find).with(list_with_interrupt_card.id).and_return(list_with_interrupt_card)
+      allow(Trello::Card).to receive(:find).with(interrupt_card.id).and_return(interrupt_card)
+      allow(Trello::Card).to receive(:find).with(jaime_card.id).and_return(jaime_card)
+      allow(Trello::Card).to receive(:find).with(tyrion_card.id).and_return(tyrion_card)
+      allow(tyrion_card).to receive(:list).and_return(list_with_interrupt_card)
+      allow(jaime_card).to receive(:list).and_return(list_with_interrupt_card)
+      allow(interrupt_card).to receive(:list).and_return(list_with_interrupt_card)
       allow(list).to receive(:cards).and_return([ tyrion_card, jaime_card ])
       allow(list_with_interrupt_card).to receive(:cards).and_return([ interrupt_card, tyrion_card, jaime_card ])
     end
@@ -36,14 +43,10 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     end
 
     describe 'when tyrion & jaime are the interrupt pair' do
-      describe 'and the interrupt card has moved to another list' do
-        before do
-          subject.instance_variable_set(:@interrupt_list, list)
-        end
-        it 'finds the interrupt list again' do
-          expect(subject).to receive(:get_interrupt_list)
-          subject.interrupt_pair
-        end
+      it 'looks up the interrupt list from the current interrupt card' do
+        expect(Trello::Card).to receive(:find).with(interrupt_card.id).and_return(interrupt_card)
+        expect(interrupt_card).to receive(:list).and_return(list_with_interrupt_card)
+        send_command("hey", as: maester)
       end
 
       describe 'and the interrupt list contains the interrupt card' do
@@ -59,11 +62,11 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       before do
         allow_any_instance_of(Trello::List).to receive(:cards).and_return([tyrion_card])
       end
-      it 'raises an error' do
-        expect { described_class.new(robot) }.to raise_error(%q(
-              Interrupt list not found!
-              Your team trello board needs a list with a card titled 'Interrupt'!
-        ))
+      it %q(privately messages the robot's admins) do
+        send_command('hello hello hello', as: maester)
+        expect(replies.last).to eq(
+          %q(Interrupt card not found! Your team trello board needs a list with a card titled 'Interrupt'.)
+        )
       end
     end
 

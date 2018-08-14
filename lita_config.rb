@@ -30,4 +30,5 @@ Lita.configure do |config|
   config.handlers.interrupt.trello_member_token = ENV['TRELLO_MEMBER_TOKEN']
   config.handlers.interrupt.board_name = ENV['TRELLO_BOARD_NAME']
   config.handlers.interrupt.team_members_hash = ENV['TEAM_MEMBERS_HASH']
+  config.handlers.interrupt.admins = config.robot.admins
 end
