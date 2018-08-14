@@ -73,6 +73,13 @@ def list_details
   }
 end
 
+def interrupt_list_details
+  {
+    'id' => 'abecfd215364782931458697',
+    source_list_id: 'badcfe214365871932547608'
+  }
+end
+
 def board_details
   {
     'id' => 'abcdef123456789123456789',
@@ -86,12 +93,7 @@ def interrupt_card_details
     list_id:                'abcdef123456789123456789',
     desc:                   'This is the interrupt card',
     member_ids:             [],
-    card_labels: %w[
-      abcdef123456789123456789
-      bbcdef123456789123456789
-      cbcdef123456789123456789
-      dbcdef123456789123456789
-    ],
+    card_labels: %w[abcdef123456789123456789 dbcdef123456789123456789],
     due:                    Date.today,
     pos:                    12,
     source_card_id:         'abcdef1234567891234567890',
@@ -105,12 +107,7 @@ def tyrion_card_details
     list_id:                'abcdef123456789123456789',
     desc:                   'Tyrion Lannister personal card.',
     member_ids:             ['tyrionlannister'],
-    card_labels: %w[
-      abcdef123456789123456789
-      bbcdef123456789123456789
-      cbcdef123456789123456789
-      dbcdef123456789123456789
-    ],
+    card_labels: %w[abcdef123456789123456789 dbcdef123456789123456789],
     due:                    Date.today,
     pos:                    12,
     source_card_id:         'abcdef1234567891234567890',
@@ -124,12 +121,7 @@ def jaime_card_details
     list_id:                'abcdef123456789123456789',
     desc:                   'Jaime Lannister personal card.',
     member_ids:             ['jaimelannister'],
-    card_labels: %w[
-      abcdef123456789123456789
-      bbcdef123456789123456789
-      cbcdef123456789123456789
-      dbcdef123456789123456789
-    ],
+    card_labels: %w[abcdef123456789123456789 dbcdef123456789123456789],
     due:                    Date.today,
     pos:                    12,
     source_card_id:         'abcdef1234567891234567890',

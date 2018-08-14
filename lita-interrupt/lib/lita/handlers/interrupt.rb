@@ -30,7 +30,7 @@ module Lita
         configure_trello
         @admins = admins
         @team_members = team_member_hash
-        @interrupt_card = fetch_interrupt_card
+        @interrupt_card = team_interrupt_card
       end
 
       def handle_mention(response)
@@ -39,7 +39,7 @@ module Lita
       end
 
       def handle_interrupt(response)
-        return unless @interrupt_card ||= fetch_interrupt_card
+        return unless @interrupt_card ||= team_interrupt_card
         interrupt_ids = interrupt_pair
         answer = +"<@#{interrupt_ids[0]}>"
         if interrupt_ids.length > 1
@@ -79,8 +79,10 @@ module Lita
 
       def team_member_hash
         team_members = {}
-        # TEAM_MEMBER_HASH should look like "trello_name1:slack_handle1,trello_name2:slack_handle2"
-        # TODO make this go in a DB and allow members to add/remove themselves by talking to bot in slack
+        # TEAM_MEMBER_HASH should look like
+        # "trello_name1:slack_handle1,trello_name2:slack_handle2"
+        # TODO make this go in redis and allow members to
+        # add/remove themselves by talking to bot in slack
         config.team_members_hash.split(',').each do |pair|
           names = pair.split(':')
           team_members[names[0]] = names[1]
@@ -97,39 +99,46 @@ module Lita
         @admins.each { |admin| robot.send_messages(admin, msg) }
       end
 
-      def fetch_interrupt_card
-        board_name = config.board_name
-        interrupt_card = nil
+      def team_trello_lists
         team_board = nil
         @team_members.each do |trello_username, _|
           member = Trello::Member.find(trello_username)
           break if (team_board = member.boards.find do |board|
-            board.name == board_name
+            board.name == config.board_name
           end)
         end
-        unless team_board
+        if team_board
+          team_board.lists
+        else
           notify_admins 'Trello team board "#{board_name}" not found! '\
           'Set "TRELLO_BOARD_NAME" and restart me, please.'
         end
+      end
 
-        team_board.lists.each do |list|
-          break_flag = false
-          Trello::List.find(list.id).cards.each do |card|
-            if card.name == 'Interrupt'
-              interrupt_card = card
-              break_flag = true
-              break
-            end
-            break if break_flag
-          end
-        end
-        unless interrupt_card
+      def validate_interrupt_cards(interrupt_cards)
+        if interrupt_cards.empty?
           notify_admins(
             'Interrupt card not found! Your team '\
             'trello board needs a list with a card titled "Interrupt".'
           )
+          return nil
+        elsif interrupt_cards.length > 1
+          notify_admins(
+            'Multiple interrupt cards found! Using first one.'
+          )
         end
-        interrupt_card
+        interrupt_cards[0]
+      end
+
+      def team_interrupt_card
+        return nil unless (team_lists = team_trello_lists)
+        interrupt_cards = []
+        team_lists.each do |list|
+          Trello::List.find(list.id).cards.each do |card|
+            card.name == 'Interrupt' && interrupt_cards << card
+          end
+        end
+        validate_interrupt_cards(interrupt_cards)
       end
 
       def interrupt_pair

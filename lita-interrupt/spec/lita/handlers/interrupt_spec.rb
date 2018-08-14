@@ -10,7 +10,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     let(:tyrion) { Lita::User.create('U5062MBLE', name: 'tyrion') }
     let(:jaime) { Lita::User.create('U8FE4C6Z7', name: 'jaime') }
     let(:list) { Trello::List.new(list_details) }
-    let(:list_with_interrupt_card) { Trello::List.new(list_details) }
+    let(:list_with_interrupt_card) { Trello::List.new(interrupt_list_details) }
     let(:interrupt_card) { Trello::Card.new(interrupt_card_details) }
     let(:jaime_card) { Trello::Card.new(jaime_card_details) }
     let(:tyrion_card) { Trello::Card.new(tyrion_card_details) }
@@ -88,6 +88,25 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     it 'routes the command' do
       is_expected.to route_command('hey').to(:handle_interrupt)
+    end
+
+    describe 'when there are multiple interrupt cards' do
+      before do
+        allow(list)
+          .to receive(:cards)
+          .and_return([interrupt_card, tyrion_card, jaime_card])
+      end
+      it 'alerts the admins and pings the interrupt pair' do
+        send_command('hello hello hello', as: maester)
+        expect(replies.last)
+          .to eq(
+            "<@#{tyrion.id}> <@#{jaime.id}>: "\
+            "you have an interrupt from <@#{maester.id}> ^^"
+          )
+        expect(replies[-2])
+          .to eq('Multiple interrupt cards found! Using first one.')
+        expect(replies.length).to eq(2)
+      end
     end
 
     describe 'when tyrion & jaime are the interrupt pair' do
