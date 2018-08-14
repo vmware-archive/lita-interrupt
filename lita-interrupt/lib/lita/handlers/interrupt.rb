@@ -4,6 +4,8 @@ require 'trello'
 require 'lita-exclusive-route'
 module Lita
   module Handlers
+    # handler for lita-slack that talks to a team trello board,
+    # finding interrupt pair at any given time
     class Interrupt < Handler
       config :trello_developer_public_key, required: true, type: String
       config :trello_member_token, required: true, type: String
@@ -12,10 +14,15 @@ module Lita
       config :admins, required: true, type: Array
       attr_reader :team_members_hash, :interrupt_card
 
-      route(%r{add (.*) to BAM}, :add_to_team, command: true)
-      # route(%r{part}, :leave_room, command: true)
-      route(%r{^(.*)$}, :handle_interrupt, command: true, exclusive: true)
-      route(%r{^(.*)@(\S+)\s*(.*)$}, :handle_mention, command: false, exclusive: true)
+      route(/add (.*) to BAM/, :add_to_team, command: true)
+      # route(/part/, :leave_room, command: true)
+      route(/^(.*)$/, :handle_interrupt, command: true, exclusive: true)
+      route(
+        /^(.*)@(\S+)\s*(.*)$/,
+        :handle_mention,
+        command: false,
+        exclusive: true
+      )
 
       def initialize(robot)
         super
@@ -45,12 +52,16 @@ module Lita
       def add_to_team(response)
         new_member = Trello::Member.find(response.match_data[1].to_s)
         # TODO: update @team_members and persist it somehow
-        response.reply(%Q(I have linked trello user '#{new_member.username}' with <@#{response.user.id}>!))
+        response.reply(
+          %(I have linked trello user "#{new_member.username}" )\
+          "with <@#{response.user.id}>!"
+        )
       end
 
       Lita.register_handler(self)
 
       private
+
       def configure_trello
         Trello.configure do |c|
           c.developer_public_key = config.trello_developer_public_key
@@ -59,7 +70,10 @@ module Lita
       end
 
       def admins
-        raise %q(The admins array must be set in lita_config.rb. A restart with 'ROBOT_ADMINS' set is required.) unless config.admins
+        unless config.admins
+          raise 'The admins array must be set in lita_config.rb. '\
+          'A restart with "ROBOT_ADMINS" set is required.'
+        end
         config.admins
       end
 
@@ -71,7 +85,11 @@ module Lita
           names = pair.split(':')
           team_members[names[0]] = names[1]
         end
-        notify_admins(%q('TEAM_MEMBERS_HASH' must be set correctly, then restart me.)) unless team_members
+        unless team_members
+          notify_admins(
+            '"TEAM_MEMBERS_HASH" must be set correctly, then restart me.'
+          )
+        end
         team_members
       end
 
@@ -85,11 +103,14 @@ module Lita
         team_board = nil
         @team_members.each do |trello_username, _|
           member = Trello::Member.find(trello_username)
-          break if team_board = member.boards.find do |board|
+          break if (team_board = member.boards.find do |board|
             board.name == board_name
-          end
+          end)
         end
-        notify_admins "Trello team board '#{board_name}' not found! Set 'TRELLO_BOARD_NAME' and restart me, please."  unless team_board
+        unless team_board
+          notify_admins 'Trello team board "#{board_name}" not found! '\
+          'Set "TRELLO_BOARD_NAME" and restart me, please.'
+        end
 
         team_board.lists.each do |list|
           break_flag = false
@@ -102,7 +123,12 @@ module Lita
             break if break_flag
           end
         end
-        notify_admins %q(Interrupt card not found! Your team trello board needs a list with a card titled 'Interrupt'.) unless interrupt_card
+        unless interrupt_card
+          notify_admins(
+            'Interrupt card not found! Your team '\
+            'trello board needs a list with a card titled "Interrupt".'
+          )
+        end
         interrupt_card
       end
 
@@ -115,7 +141,11 @@ module Lita
             interrupt_ids << @team_members[username]
           end
         end
-        interrupt_ids.empty? ? @team_members.map { |_, val| val } : interrupt_ids
+        if interrupt_ids.empty?
+          @team_members.map { |_, val| val }
+        else
+          interrupt_ids
+        end
       end
     end
   end

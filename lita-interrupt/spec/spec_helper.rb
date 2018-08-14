@@ -1,8 +1,11 @@
-require "lita-interrupt"
-require "lita/rspec"
+# frozen_string_literal: true
 
-# A compatibility mode is provided for older plugins upgrading from Lita 3. Since this plugin
-# was generated with Lita 4, the compatibility mode should be left disabled.
+require 'lita-interrupt'
+require 'lita/rspec'
+
+# A compatibility mode is provided for older plugins upgrading from Lita 3.
+# Since this plugin was generated with Lita 4, the compatibility mode
+# should be left disabled.
 Lita.version_3_compatibility_mode = false
 
 RSpec.configure do |config|
@@ -23,6 +26,7 @@ def jon_details
     'email'      => 'jonsnow@thewall.com'
   }
 end
+
 def sam_details
   {
     'id'         => 'abcdef123456789012345678',
@@ -35,6 +39,7 @@ def sam_details
     'email'      => 'samwelltarley@thewall.com'
   }
 end
+
 def jaime_details
   {
     'id'         => 'abdcfe132465879012346587',
@@ -47,6 +52,7 @@ def jaime_details
     'email'      => 'jaimelannister@golden.com'
   }
 end
+
 def tyrion_details
   {
     'id'         => 'abcedf132465798021354687',
@@ -59,63 +65,74 @@ def tyrion_details
     'email'      => 'tyrionlannister@golden.com'
   }
 end
+
 def list_details
   {
-    'id'           => 'abcdef123456789123456789',
+    'id' => 'abcdef123456789123456789',
     source_list_id: 'abcdef123456789123456780'
   }
 end
+
 def board_details
   {
-    'id'               => 'abcdef123456789123456789',
+    'id' => 'abcdef123456789123456789',
     organization_id: 'abcdef123456789123456789'
   }
 end
+
 def interrupt_card_details
   {
     name:                   'Interrupt',
     list_id:                'abcdef123456789123456789',
     desc:                   'This is the interrupt card',
     member_ids:             [],
-    card_labels:            [ 'abcdef123456789123456789',
-                              'bbcdef123456789123456789',
-                              'cbcdef123456789123456789',
-                              'dbcdef123456789123456789' ],
-                              due:                    Date.today,
-                              pos:                    12,
-                              source_card_id:         'abcdef1234567891234567890',
-                              source_card_properties: 'checklist,members'
+    card_labels: %w[
+      abcdef123456789123456789
+      bbcdef123456789123456789
+      cbcdef123456789123456789
+      dbcdef123456789123456789
+    ],
+    due:                    Date.today,
+    pos:                    12,
+    source_card_id:         'abcdef1234567891234567890',
+    source_card_properties: 'checklist,members'
   }
 end
+
 def tyrion_card_details
   {
     name:                   'Tyrion Lannister',
     list_id:                'abcdef123456789123456789',
     desc:                   'Tyrion Lannister personal card.',
     member_ids:             ['tyrionlannister'],
-    card_labels:            [ 'abcdef123456789123456789',
-                              'bbcdef123456789123456789',
-                              'cbcdef123456789123456789',
-                              'dbcdef123456789123456789' ],
-                              due:                    Date.today,
-                              pos:                    12,
-                              source_card_id:         'abcdef1234567891234567890',
-                              source_card_properties: 'checklist,members'
+    card_labels: %w[
+      abcdef123456789123456789
+      bbcdef123456789123456789
+      cbcdef123456789123456789
+      dbcdef123456789123456789
+    ],
+    due:                    Date.today,
+    pos:                    12,
+    source_card_id:         'abcdef1234567891234567890',
+    source_card_properties: 'checklist,members'
   }
 end
+
 def jaime_card_details
   {
     name:                   'Jaime Lannister',
     list_id:                'abcdef123456789123456789',
     desc:                   'Jaime Lannister personal card.',
     member_ids:             ['jaimelannister'],
-    card_labels:            [ 'abcdef123456789123456789',
-                              'bbcdef123456789123456789',
-                              'cbcdef123456789123456789',
-                              'dbcdef123456789123456789' ],
-                              due:                    Date.today,
-                              pos:                    12,
-                              source_card_id:         'abcdef1234567891234567890',
-                              source_card_properties: 'checklist,members'
+    card_labels: %w[
+      abcdef123456789123456789
+      bbcdef123456789123456789
+      cbcdef123456789123456789
+      dbcdef123456789123456789
+    ],
+    due:                    Date.today,
+    pos:                    12,
+    source_card_id:         'abcdef1234567891234567890',
+    source_card_properties: 'checklist,members'
   }
 end
