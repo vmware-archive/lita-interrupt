@@ -98,7 +98,8 @@ module Lita
       end
 
       def team_roster_hash
-        unless (@team_roster = redis.get(:roster_hash))
+        team_roster = redis.get(:roster_hash)
+        unless team_roster
           notify_admins(
             'You must add some users to the team roster. '\
             "You will need each member's slack handle and trello user name."
