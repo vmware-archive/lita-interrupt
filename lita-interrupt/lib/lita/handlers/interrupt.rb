@@ -107,12 +107,12 @@ module Lita
             board.name == config.board_name
           end)
         end
-        if team_board
-          team_board.lists
-        else
-          notify_admins 'Trello team board "#{board_name}" not found! '\
+        unless team_board
+          notify_admins %(Trello team board "#{config.board_name}" not found! )\
           'Set "TRELLO_BOARD_NAME" and restart me, please.'
+          return nil
         end
+        team_board.lists
       end
 
       def validate_interrupt_cards(interrupt_cards)

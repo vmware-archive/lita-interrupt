@@ -14,11 +14,12 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     let(:interrupt_card) { Trello::Card.new(interrupt_card_details) }
     let(:jaime_card) { Trello::Card.new(jaime_card_details) }
     let(:tyrion_card) { Trello::Card.new(tyrion_card_details) }
+    let(:board_name) { 'Game of Boards' }
     before do
       registry.configure do |config|
         config.handlers.interrupt.trello_developer_public_key = ''
         config.handlers.interrupt.trello_member_token = ''
-        config.handlers.interrupt.board_name = 'Game of Boards'
+        config.handlers.interrupt.board_name = board_name
         config.handlers.interrupt.team_members_hash = \
           'jonsnow:U1BSCLVQ1,samwelltarley:U93MFAV9V,'\
           'tyrionlannister:U5062MBLE,jaimelannister:U8FE4C6Z7'
@@ -185,6 +186,24 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
             "you have an interrupt from <@#{maester.id}> ^^"
           )
         expect(replies.length).to eq(1)
+      end
+    end
+
+    describe 'when the team board does not exist for any members' do
+      before do
+        allow_any_instance_of(Trello::Member)
+          .to receive(:boards)
+          .and_return([Trello::Board.new(name: 'Game of Bards')])
+      end
+      it 'alerts the admins' do
+        send_message(+"hey hey hey @#{robot.name} hello", as: maester)
+        expect(replies.last)
+          .to eq(
+            %(Trello team board "#{board_name}" not found! )\
+            'Set "TRELLO_BOARD_NAME" and restart me, please.'
+          )
+        # once on startup and once on message
+        expect(replies.length).to eq(2)
       end
     end
   end
