@@ -14,12 +14,13 @@ module Lita
       config :admins, required: true, type: Array
       attr_reader :team_members_hash, :interrupt_card
 
-      route(/add (.+) to the (.*) team/, :add_to_team, command: true)
-      route(/part/, :leave_room, command: true)
-      route(/^(.*)$/, :handle_interrupt, command: true, exclusive: true)
+      route(/^add (.+) to the (.*) team.*$/, :handle_add_to_team, command: true)
+      route(/^part$/, :handle_part, command: true)
+      route(/^team$/, :handle_list_team, command: true)
+      route(/^(.*)$/, :handle_interrupt_command, command: true, exclusive: true)
       route(
         /^(.*)@(\S+)\s*(.*)$/,
-        :handle_mention,
+        :handle_interrupt_mention,
         command: false,
         exclusive: true
       )
@@ -33,17 +34,24 @@ module Lita
         @interrupt_card = team_interrupt_card
       end
 
-      def leave_room(response)
-        puts robot.persisted_rooms.inspect
+      def handle_part(response)
         robot.part(response.room)
       end
 
-      def handle_mention(response)
-        matches = response.matches[0]
-        handle_interrupt(response) if matches[1] == robot.name
+      def handle_list_team(response)
+        reply = +'The team members are '
+        @team_members.each do |key, val|
+          reply << "<@#{val}> => #{key}, "
+        end
+        response.reply(reply.gsub(/, $/, ''))
       end
 
-      def handle_interrupt(response)
+      def handle_interrupt_mention(response)
+        matches = response.matches[0]
+        handle_interrupt_command(response) if matches[1] == robot.name
+      end
+
+      def handle_interrupt_command(response)
         return unless @interrupt_card ||= team_interrupt_card
         interrupt_ids = interrupt_pair
         answer = +"<@#{interrupt_ids[0]}>"
@@ -54,7 +62,7 @@ module Lita
         response.reply(answer)
       end
 
-      def add_to_team(response)
+      def handle_add_to_team(response)
         new_member = Trello::Member.find(response.match_data[1].to_s)
         # TODO: update @team_members and persist it somehow
         response.reply(
@@ -77,7 +85,7 @@ module Lita
       def admins
         unless config.admins
           raise 'The admins array must be set in lita_config.rb. '\
-          'A restart with "ROBOT_ADMINS" set is required.'
+            'A restart with "ROBOT_ADMINS" set is required.'
         end
         config.admins
       end

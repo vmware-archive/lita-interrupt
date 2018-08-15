@@ -88,25 +88,31 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     end
 
     it 'routes commands' do
-      is_expected.to route_command('hey').to(:handle_interrupt)
+      is_expected.to route_command('hey').to(:handle_interrupt_command)
     end
 
     it 'routes generic mentions' do
       is_expected
         .to route(+"hey hey hey @#{robot.name} hello")
-        .to(:handle_mention)
+        .to(:handle_interrupt_mention)
     end
 
     it 'routes requests to be added to a team' do
       is_expected
         .to route_command(+'add trello_user_123 to the GoB team')
-        .to(:add_to_team)
+        .to(:handle_add_to_team)
     end
 
     it 'routes requests to part' do
       is_expected
         .to route_command(+'part')
-        .to(:leave_room)
+        .to(:handle_part)
+    end
+
+    it 'routes requests to list team members' do
+      is_expected
+        .to route_command(+'team')
+        .to(:handle_list_team)
     end
 
     describe 'when there are multiple interrupt cards' do
@@ -230,6 +236,18 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         room = Lita::Room.create_or_update('#this_example_room')
         expect(robot).to receive(:part).with(room)
         send_command('part', from: room, as: user)
+      end
+    end
+
+    describe 'when someone asks to get a list of team members' do
+      it 'lists the team member slack handles and trello user names' do
+        send_command('team', as: maester)
+        expect(replies.last).to eq(
+          'The team members are <@U1BSCLVQ1> => jonsnow, '\
+            '<@U93MFAV9V> => samwelltarley, '\
+            '<@U5062MBLE> => tyrionlannister, '\
+            '<@U8FE4C6Z7> => jaimelannister'
+        )
       end
     end
   end
