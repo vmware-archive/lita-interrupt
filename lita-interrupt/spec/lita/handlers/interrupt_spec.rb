@@ -95,9 +95,15 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         .to(:handle_interrupt_mention)
     end
 
+    it 'routes requests to be removed from a team' do
+      is_expected
+        .to route_command(+'remove me')
+        .to(:handle_remove_from_team)
+    end
+
     it 'routes requests to be added to a team' do
       is_expected
-        .to route_command(+'add trello_user_123 to the GoB team')
+        .to route_command(+'add trello_user_123 ')
         .to(:handle_add_to_team)
     end
 
@@ -245,7 +251,18 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when someone requests that they be added to team_roster' do
+    describe 'when someone requests that they be removed from team roster' do
+      it 'removes them' do
+        send_command('remove me', as: sam)
+        expect(replies.last)
+          .to eq(
+            %(I have removed trello user "samwelltarley" with <@#{sam.id}>!)
+          )
+        expect(redis_team_roster_hash).to eq(diminished_team_details)
+      end
+    end
+
+    describe 'when someone requests that they be added to team roster' do
       before do
         allow(Trello::Member)
           .to receive(:find)
@@ -253,12 +270,12 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           .and_return(Trello::Member.new(new_sam_details))
       end
       it 'adds them' do
-        send_command('add samwelltarley2 to the GoB team', as: sam)
+        send_command('add samwelltarley2 ', as: sam)
         expect(replies.last)
           .to eq(
             %(I have linked trello user "samwelltarley2" with <@#{sam.id}>!)
           )
-        expect(redis_team_roster_hash).to eq(updated_team_details)
+        expect(redis_team_roster_hash).to eq(augmented_team_details)
       end
     end
 

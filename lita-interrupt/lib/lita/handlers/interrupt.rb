@@ -13,7 +13,8 @@ module Lita
       config :admins, required: true, type: Array
       attr_reader :admins, :team_roster, :interrupt_card
 
-      route(/^add (.+) to the (.*) team.*$/, :handle_add_to_team, command: true)
+      route(/^add (\S+)\s*$/, :handle_add_to_team, command: true)
+      route(/^remove me\s*$/, :handle_remove_from_team, command: true)
       route(/^part$/, :handle_part, command: true)
       route(/^team$/, :handle_list_team, command: true)
       route(/^(.*)$/, :handle_interrupt_command, command: true, exclusive: true)
@@ -60,6 +61,16 @@ module Lita
         end
         answer << ": you have an interrupt from <@#{response.user.id}> ^^"
         response.reply(answer)
+      end
+
+      def handle_remove_from_team(response)
+        trello_username = @team_roster.key(response.user.id)
+        @team_roster.delete(trello_username)
+        redis.set(:roster_hash, @team_roster.to_json)
+        response.reply(
+          %(I have removed trello user "#{trello_username}" )\
+          "with <@#{response.user.id}>!"
+        )
       end
 
       def handle_add_to_team(response)

@@ -151,12 +151,20 @@ def team_details
   }
 end
 
-def updated_team_details
+def augmented_team_details
   {
     'jonsnow' => 'U1BSCLVQ1',
     'samwelltarley' => 'U93MFAV9V',
     'tyrionlannister' => 'U5062MBLE',
     'jaimelannister' => 'U8FE4C6Z7',
     'samwelltarley2' => 'U93MFAV9V'
+  }
+end
+
+def diminished_team_details
+  {
+    'jonsnow' => 'U1BSCLVQ1',
+    'tyrionlannister' => 'U5062MBLE',
+    'jaimelannister' => 'U8FE4C6Z7',
   }
 end
