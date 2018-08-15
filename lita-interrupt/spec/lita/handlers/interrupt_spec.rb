@@ -87,8 +87,26 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         .and_return([interrupt_card, tyrion_card, jaime_card])
     end
 
-    it 'routes the command' do
+    it 'routes commands' do
       is_expected.to route_command('hey').to(:handle_interrupt)
+    end
+
+    it 'routes generic mentions' do
+      is_expected
+        .to route(+"hey hey hey @#{robot.name} hello")
+        .to(:handle_mention)
+    end
+
+    it 'routes requests to be added to a team' do
+      is_expected
+        .to route_command(+'add trello_user_123 to the GoB team')
+        .to(:add_to_team)
+    end
+
+    it 'routes requests to part' do
+      is_expected
+        .to route_command(+'part')
+        .to(:leave_room)
     end
 
     describe 'when there are multiple interrupt cards' do
@@ -168,7 +186,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     describe 'someone requests to be added to team_members' do
       it 'adds them' do
-        send_command('add samwelltarley to BAM', as: sam)
+        send_command('add samwelltarley to the GoB team', as: sam)
         expect(replies.last)
           .to eq(
             %(I have linked trello user "samwelltarley" with <@#{sam.id}>!)
@@ -204,6 +222,14 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           )
         # once on startup and once on message
         expect(replies.length).to eq(2)
+      end
+    end
+
+    describe 'when asked to leave a room' do
+      it 'leaves the room' do
+        room = Lita::Room.create_or_update('#this_example_room')
+        expect(robot).to receive(:part).with(room)
+        send_command('part', from: room, as: user)
       end
     end
   end

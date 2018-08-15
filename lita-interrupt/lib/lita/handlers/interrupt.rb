@@ -14,8 +14,8 @@ module Lita
       config :admins, required: true, type: Array
       attr_reader :team_members_hash, :interrupt_card
 
-      route(/add (.*) to BAM/, :add_to_team, command: true)
-      # route(/part/, :leave_room, command: true)
+      route(/add (.+) to the (.*) team/, :add_to_team, command: true)
+      route(/part/, :leave_room, command: true)
       route(/^(.*)$/, :handle_interrupt, command: true, exclusive: true)
       route(
         /^(.*)@(\S+)\s*(.*)$/,
@@ -31,6 +31,11 @@ module Lita
         @admins = admins
         @team_members = team_member_hash
         @interrupt_card = team_interrupt_card
+      end
+
+      def leave_room(response)
+        puts robot.persisted_rooms.inspect
+        robot.part(response.room)
       end
 
       def handle_mention(response)
