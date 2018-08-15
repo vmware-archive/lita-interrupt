@@ -10,9 +10,8 @@ module Lita
       config :trello_developer_public_key, required: true, type: String
       config :trello_member_token, required: true, type: String
       config :board_name, required: true, type: String
-      config :team_members_hash, required: true, type: String
       config :admins, required: true, type: Array
-      attr_reader :team_members_hash, :interrupt_card
+      attr_reader :admins, :team_roster, :interrupt_card
 
       route(/^add (.+) to the (.*) team.*$/, :handle_add_to_team, command: true)
       route(/^part$/, :handle_part, command: true)
@@ -29,9 +28,9 @@ module Lita
         super
 
         configure_trello
-        @admins = admins
-        @team_members = team_member_hash
-        @interrupt_card = team_interrupt_card
+        @admins = admins_array
+        @team_roster = team_roster_hash
+        @interrupt_card = team_interrupt_card if @team_roster
       end
 
       def handle_part(response)
@@ -39,8 +38,9 @@ module Lita
       end
 
       def handle_list_team(response)
-        reply = +'The team members are '
-        @team_members.each do |key, val|
+        return unless @team_roster ||= team_roster_hash
+        reply = +'The team roster is '
+        @team_roster.each do |key, val|
           reply << "<@#{val}> => #{key}, "
         end
         response.reply(reply.gsub(/, $/, ''))
@@ -63,8 +63,15 @@ module Lita
       end
 
       def handle_add_to_team(response)
-        new_member = Trello::Member.find(response.match_data[1].to_s)
-        # TODO: update @team_members and persist it somehow
+        trello_username = response.match_data[1].to_s
+        unless (new_member = Trello::Member.find(trello_username))
+          response.reply(
+            %(Did not find the trello username "#{trello_username}")
+          )
+          return
+        end
+        @team_roster[trello_username] = response.user.id
+        redis.set(:roster_hash, @team_roster.to_json)
         response.reply(
           %(I have linked trello user "#{new_member.username}" )\
           "with <@#{response.user.id}>!"
@@ -82,7 +89,7 @@ module Lita
         end
       end
 
-      def admins
+      def admins_array
         unless config.admins
           raise 'The admins array must be set in lita_config.rb. '\
             'A restart with "ROBOT_ADMINS" set is required.'
@@ -90,22 +97,15 @@ module Lita
         config.admins
       end
 
-      def team_member_hash
-        team_members = {}
-        # TEAM_MEMBER_HASH should look like
-        # "trello_name1:slack_handle1,trello_name2:slack_handle2"
-        # TODO make this go in redis and allow members to
-        # add/remove themselves by talking to bot in slack
-        config.team_members_hash.split(',').each do |pair|
-          names = pair.split(':')
-          team_members[names[0]] = names[1]
-        end
-        unless team_members
+      def team_roster_hash
+        unless (@team_roster = redis.get(:roster_hash))
           notify_admins(
-            '"TEAM_MEMBERS_HASH" must be set correctly, then restart me.'
+            'You must add some users to the team roster. '\
+            "You will need each member's slack handle and trello user name."
           )
+          return nil
         end
-        team_members
+        JSON.parse(team_roster)
       end
 
       def notify_admins(msg)
@@ -114,7 +114,7 @@ module Lita
 
       def team_trello_lists
         team_board = nil
-        @team_members.each do |trello_username, _|
+        @team_roster.each do |trello_username, _|
           member = Trello::Member.find(trello_username)
           break if (team_board = member.boards.find do |board|
             board.name == config.board_name
@@ -160,11 +160,11 @@ module Lita
         interrupt_list.cards.each do |card|
           card.member_ids.each do |member|
             username = Trello::Member.find(member).username
-            interrupt_ids << @team_members[username]
+            interrupt_ids << @team_roster[username]
           end
         end
         if interrupt_ids.empty?
-          @team_members.map { |_, val| val }
+          @team_roster.map { |_, val| val }
         else
           interrupt_ids
         end

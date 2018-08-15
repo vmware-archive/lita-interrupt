@@ -40,6 +40,19 @@ def sam_details
   }
 end
 
+def new_sam_details
+  {
+    'id'         => 'badce1f24357680913246578',
+    'fullName'   => 'Samwell Tarley',
+    'username'   => 'samwelltarley2',
+    'intials'    => 'ST',
+    'avatarHash' => 'abcdef1234567890abcdef1234567890',
+    'bio'        => 'a rather famous user with a new username',
+    'url'        => 'https://trello.com/samwelltarley',
+    'email'      => 'samwelltarley@thewall.com'
+  }
+end
+
 def jaime_details
   {
     'id'         => 'abdcfe132465879012346587',
@@ -126,5 +139,24 @@ def jaime_card_details
     pos:                    12,
     source_card_id:         'abcdef1234567891234567890',
     source_card_properties: 'checklist,members'
+  }
+end
+
+def team_details
+  {
+    'jonsnow' => 'U1BSCLVQ1',
+    'samwelltarley' => 'U93MFAV9V',
+    'tyrionlannister' => 'U5062MBLE',
+    'jaimelannister' => 'U8FE4C6Z7'
+  }
+end
+
+def updated_team_details
+  {
+    'jonsnow' => 'U1BSCLVQ1',
+    'samwelltarley' => 'U93MFAV9V',
+    'tyrionlannister' => 'U5062MBLE',
+    'jaimelannister' => 'U8FE4C6Z7',
+    'samwelltarley2' => 'U93MFAV9V'
   }
 end

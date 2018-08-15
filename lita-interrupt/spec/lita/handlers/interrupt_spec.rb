@@ -15,14 +15,14 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     let(:jaime_card) { Trello::Card.new(jaime_card_details) }
     let(:tyrion_card) { Trello::Card.new(tyrion_card_details) }
     let(:board_name) { 'Game of Boards' }
+    let(:redis_team_roster_hash) do
+      JSON.parse(subject.redis.get(:roster_hash))
+    end
     before do
       registry.configure do |config|
         config.handlers.interrupt.trello_developer_public_key = ''
         config.handlers.interrupt.trello_member_token = ''
         config.handlers.interrupt.board_name = board_name
-        config.handlers.interrupt.team_members_hash = \
-          'jonsnow:U1BSCLVQ1,samwelltarley:U93MFAV9V,'\
-          'tyrionlannister:U5062MBLE,jaimelannister:U8FE4C6Z7'
         config.handlers.interrupt.admins = [maester]
       end
       allow(Trello::Member)
@@ -32,18 +32,15 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       allow(Trello::Member)
         .to receive(:find)
         .with('samwelltarley')
-        .and_return(Trello::Member
-        .new(sam_details))
+        .and_return(Trello::Member.new(sam_details))
       allow(Trello::Member)
         .to receive(:find)
         .with('jaimelannister')
-        .and_return(Trello::Member
-        .new(jaime_details))
+        .and_return(Trello::Member.new(jaime_details))
       allow(Trello::Member)
         .to receive(:find)
         .with('tyrionlannister')
-        .and_return(Trello::Member
-        .new(tyrion_details))
+        .and_return(Trello::Member.new(tyrion_details))
       allow_any_instance_of(Trello::Member)
         .to receive(:boards)
         .and_return([Trello::Board.new(name: 'Game of Boards')])
@@ -85,6 +82,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       allow(list_with_interrupt_card)
         .to receive(:cards)
         .and_return([interrupt_card, tyrion_card, jaime_card])
+      subject.redis.set(:roster_hash, team_details.to_json)
     end
 
     it 'routes commands' do
@@ -109,7 +107,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         .to(:handle_part)
     end
 
-    it 'routes requests to list team members' do
+    it 'routes requests to list team roster' do
       is_expected
         .to route_command(+'team')
         .to(:handle_list_team)
@@ -130,7 +128,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           )
         expect(replies[-2])
           .to eq('Multiple interrupt cards found! Using first one.')
-        expect(replies.length).to eq(2)
       end
     end
 
@@ -154,7 +151,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
               "<@#{tyrion.id}> <@#{jaime.id}>: "\
               "you have an interrupt from <@#{maester.id}> ^^"
             )
-          expect(replies.length).to eq(1)
         end
       end
     end
@@ -186,18 +182,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
             "<@#{jon.id}> <@#{sam.id}> <@#{tyrion.id}> <@#{jaime.id}>: "\
             "you have an interrupt from <@#{maester.id}> ^^"
           )
-        expect(replies.length).to eq(1)
-      end
-    end
-
-    describe 'someone requests to be added to team_members' do
-      it 'adds them' do
-        send_command('add samwelltarley to the GoB team', as: sam)
-        expect(replies.last)
-          .to eq(
-            %(I have linked trello user "samwelltarley" with <@#{sam.id}>!)
-          )
-        expect(replies.length).to eq(1)
       end
     end
 
@@ -209,11 +193,10 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
             "<@#{tyrion.id}> <@#{jaime.id}>: "\
             "you have an interrupt from <@#{maester.id}> ^^"
           )
-        expect(replies.length).to eq(1)
       end
     end
 
-    describe 'when the team board does not exist for any members' do
+    describe 'when the team board does not exist for any roster' do
       before do
         allow_any_instance_of(Trello::Member)
           .to receive(:boards)
@@ -226,8 +209,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
             %(Trello team board "#{board_name}" not found! )\
             'Set "TRELLO_BOARD_NAME" and restart me, please.'
           )
-        # once on startup and once on message
-        expect(replies.length).to eq(2)
       end
     end
 
@@ -239,11 +220,53 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when someone asks to get a list of team members' do
+    describe 'when someone asks to get a list of the team roster' do
       it 'lists the team member slack handles and trello user names' do
         send_command('team', as: maester)
         expect(replies.last).to eq(
-          'The team members are <@U1BSCLVQ1> => jonsnow, '\
+          'The team roster is <@U1BSCLVQ1> => jonsnow, '\
+            '<@U93MFAV9V> => samwelltarley, '\
+            '<@U5062MBLE> => tyrionlannister, '\
+            '<@U8FE4C6Z7> => jaimelannister'
+        )
+      end
+    end
+
+    describe 'when the redis store has no team roster' do
+      before do
+        subject.redis.del(:roster_hash)
+      end
+      it 'lets the admins know that there are no team roster' do
+        send_command('team', as: maester)
+        expect(replies.last).to eq(
+          'You must add some users to the team roster. '\
+          "You will need each member's slack handle and trello user name."
+        )
+      end
+    end
+
+    describe 'when someone requests that they be added to team_roster' do
+      before do
+        allow(Trello::Member)
+          .to receive(:find)
+          .with('samwelltarley2')
+          .and_return(Trello::Member.new(new_sam_details))
+      end
+      it 'adds them' do
+        send_command('add samwelltarley2 to the GoB team', as: sam)
+        expect(replies.last)
+          .to eq(
+            %(I have linked trello user "samwelltarley2" with <@#{sam.id}>!)
+          )
+        expect(redis_team_roster_hash).to eq(updated_team_details)
+      end
+    end
+
+    describe '' do
+      it 'lists the team member slack handles and trello user names' do
+        send_command('team', as: maester)
+        expect(replies.last).to eq(
+          'The team roster is <@U1BSCLVQ1> => jonsnow, '\
             '<@U93MFAV9V> => samwelltarley, '\
             '<@U5062MBLE> => tyrionlannister, '\
             '<@U8FE4C6Z7> => jaimelannister'
