@@ -97,7 +97,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     it 'routes requests to be removed from a team' do
       is_expected
-        .to route_command(+'remove me')
+        .to route_command(+'remove  me')
         .to(:handle_remove_from_team)
     end
 
@@ -253,7 +253,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     describe 'when someone requests that they be removed from team roster' do
       it 'removes them' do
-        send_command('remove me', as: sam)
+        send_command('remove  me', as: sam)
         expect(replies.last)
           .to eq(
             %(I have removed trello user "samwelltarley" with <@#{sam.id}>!)
@@ -279,7 +279,41 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe '' do
+    describe 'when an admin requests to add someone to the team roster' do
+      before do
+        allow(Trello::Member)
+          .to receive(:find)
+          .with('samwelltarley2')
+          .and_return(Trello::Member.new(new_sam_details))
+      end
+      it 'adds them' do
+        send_command("add samwelltarley2 (@#{sam.id})", as: maester)
+        expect(replies.last)
+          .to eq(
+            %(I have linked trello user "samwelltarley2" with <@#{sam.id}>!)
+          )
+        expect(redis_team_roster_hash).to eq(augmented_team_details)
+      end
+    end
+
+    describe 'when a non-admin requests to add someone to the team roster' do
+      before do
+        allow(Trello::Member)
+          .to receive(:find)
+          .with('samwelltarley2')
+          .and_return(Trello::Member.new(new_sam_details))
+      end
+      it 'adds them' do
+        send_command("add samwelltarley2 (@#{sam.id})", as: jaime)
+        expect(replies.last)
+          .to_not eq(
+            %(I have linked trello user "samwelltarley2" with <@#{sam.id}>!)
+          )
+        expect(redis_team_roster_hash).to eq(team_details)
+      end
+    end
+
+    describe 'when someone asks for the team roster' do
       it 'lists the team member slack handles and trello user names' do
         send_command('team', as: maester)
         expect(replies.last).to eq(
