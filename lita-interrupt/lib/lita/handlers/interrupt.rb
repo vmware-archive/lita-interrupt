@@ -13,8 +13,8 @@ module Lita
       config :admins, required: true, type: Array
       attr_reader :admins, :team_roster, :interrupt_card
 
-      route(/^add\s+(\S+)(\s+\(@\S+\))?\s*$/, :handle_add_to_team, command: true)
-      route(/^remove\s+me\s*$/, :handle_remove_from_team, command: true)
+      route(/^add\s+(\S+)(\s+\(?@\S+\)?)?\s*$/, :handle_add_to_team, command: true)
+      route(/^remove\s+(me|@\S+)\s*$/, :handle_remove_from_team, command: true)
       route(/^part$/, :handle_part, command: true)
       route(/^team$/, :handle_list_team, command: true)
       route(/^(.*)$/, :handle_interrupt_command, command: true, exclusive: true)
@@ -64,12 +64,19 @@ module Lita
       end
 
       def handle_remove_from_team(response)
+        match = response.match_data[1].to_s
         trello_username = @team_roster.key(response.user.id)
+        slack_handle = response.user.id
+        unless match == 'me'
+          return unless @admins.find { |admin| response.user == admin }
+          slack_handle = match.gsub(/^@/, '')
+          trello_username = @team_roster.key(slack_handle)
+        end
         @team_roster.delete(trello_username)
         redis.set(:roster_hash, @team_roster.to_json)
         response.reply(
           %(I have removed trello user "#{trello_username}" )\
-          "with <@#{response.user.id}>!"
+          "(<@#{slack_handle}>)!"
         )
       end
 
@@ -78,7 +85,7 @@ module Lita
         user_to_add = nil
         if response.match_data[2]
           user_to_add = response.match_data[2].to_s
-                                .gsub(/ *\(@/, '').gsub(/\)$/, '')
+                                .gsub(/^ *\(?@/, '').gsub(/^\)$/, '')
           return unless @admins.find { |admin| response.user == admin }
         end
         unless (new_member = Trello::Member.find(trello_username))
@@ -91,7 +98,7 @@ module Lita
         redis.set(:roster_hash, @team_roster.to_json)
         response.reply(
           %(I have linked trello user "#{new_member.username}" )\
-          "with <@#{@team_roster[trello_username]}>!"
+          "(<@#{@team_roster[trello_username]}>)!"
         )
       end
 
