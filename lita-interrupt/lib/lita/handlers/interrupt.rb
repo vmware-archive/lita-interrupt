@@ -13,7 +13,11 @@ module Lita
       config :admins, required: true, type: Array
       attr_reader :admins, :team_roster, :interrupt_card
 
-      route(/^add\s+(\S+)(\s+\(?@\S+\)?)?\s*$/, :handle_add_to_team, command: true)
+      route(
+        /^add\s+(\S+)(\s+\(?@\S+\)?)?\s*$/,
+        :handle_add_to_team,
+        command: true
+      )
       route(/^remove\s+(me|@\S+)\s*$/, :handle_remove_from_team, command: true)
       route(/^part$/, :handle_part, command: true)
       route(/^team$/, :handle_list_team, command: true)
@@ -29,7 +33,10 @@ module Lita
         super
 
         configure_trello
-        @admins = admins_array
+        @admins = config.admins.map do |admin|
+          admin_user = Lita::User.create(admin)
+          Lita::Source.new(user: admin_user)
+        end
         @team_roster = team_roster_hash
         @interrupt_card = team_interrupt_card if @team_roster
       end
@@ -68,7 +75,9 @@ module Lita
         trello_username = @team_roster.key(response.user.id)
         slack_handle = response.user.id
         unless match == 'me'
-          return unless @admins.find { |admin| response.user == admin }
+          return unless @admins.find do |admin|
+            response.user.id == admin.user.id
+          end
           slack_handle = match.gsub(/^@/, '')
           trello_username = @team_roster.key(slack_handle)
         end
@@ -82,11 +91,12 @@ module Lita
 
       def handle_add_to_team(response)
         trello_username = response.match_data[1].to_s
-        user_to_add = nil
         if response.match_data[2]
           user_to_add = response.match_data[2].to_s
                                 .gsub(/^ *\(?@/, '').gsub(/^\)$/, '')
-          return unless @admins.find { |admin| response.user == admin }
+          return unless @admins.find do |admin|
+            response.user.id == admin.user.id
+          end
         end
         unless (new_member = Trello::Member.find(trello_username))
           response.reply(
@@ -94,6 +104,7 @@ module Lita
           )
           return
         end
+        @team_roster ||= {}
         @team_roster[trello_username] = user_to_add || response.user.id
         redis.set(:roster_hash, @team_roster.to_json)
         response.reply(
@@ -113,14 +124,6 @@ module Lita
         end
       end
 
-      def admins_array
-        unless config.admins
-          raise 'The admins array must be set in lita_config.rb. '\
-            'A restart with "ROBOT_ADMINS" set is required.'
-        end
-        config.admins
-      end
-
       def team_roster_hash
         team_roster = redis.get(:roster_hash)
         unless team_roster
@@ -134,11 +137,14 @@ module Lita
       end
 
       def notify_admins(msg)
-        @admins.each { |admin| robot.send_messages(admin, msg) }
+        @admins.each do |admin|
+          robot.send_messages(admin, msg)
+        end
       end
 
       def team_trello_lists
         team_board = nil
+        return unless @team_roster
         @team_roster.each do |trello_username, _|
           member = Trello::Member.find(trello_username)
           break if (team_board = member.boards.find do |board|

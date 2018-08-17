@@ -11,9 +11,16 @@ Lita.configure do |config|
 
   config.robot.adapter = ENV['ROBOT_ADAPTER'].to_sym
   config.robot.admins = []
+  config.handlers.interrupt.admins = []
   ENV['ROBOT_ADMINS'].split(',').each do |admin|
     config.robot.admins << admin
+    config.handlers.interrupt.admins << admin
   end
+
+  config.handlers.interrupt.trello_developer_public_key = \
+    ENV['TRELLO_DEVELOPER_PUBLIC_KEY']
+  config.handlers.interrupt.trello_member_token = ENV['TRELLO_MEMBER_TOKEN']
+  config.handlers.interrupt.board_name = ENV['TRELLO_BOARD_NAME']
 
   config.adapters.slack.token = ENV['ADAPTERS_SLACK_TOKEN']
 
@@ -28,10 +35,4 @@ Lita.configure do |config|
     config.redis[:port] = ENV['REDIS_PORT'].to_i
   end
 
-  config.handlers.interrupt.trello_developer_public_key = \
-    ENV['TRELLO_DEVELOPER_PUBLIC_KEY']
-  config.handlers.interrupt.trello_member_token = ENV['TRELLO_MEMBER_TOKEN']
-  config.handlers.interrupt.board_name = ENV['TRELLO_BOARD_NAME']
-  config.handlers.interrupt.team_members_hash = ENV['TEAM_MEMBERS_HASH']
-  config.handlers.interrupt.admins = config.robot.admins
 end

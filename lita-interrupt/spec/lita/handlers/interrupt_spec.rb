@@ -23,7 +23,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         config.handlers.interrupt.trello_developer_public_key = ''
         config.handlers.interrupt.trello_member_token = ''
         config.handlers.interrupt.board_name = board_name
-        config.handlers.interrupt.admins = [maester]
+        config.handlers.interrupt.admins = [maester.id]
       end
       allow(Trello::Member)
         .to receive(:find)
@@ -202,7 +202,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when the team board does not exist for any roster' do
+    describe 'when the team board does not exist for any roster member' do
       before do
         allow_any_instance_of(Trello::Member)
           .to receive(:boards)
@@ -239,15 +239,26 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     end
 
     describe 'when the redis store has no team roster' do
-      before do
-        subject.redis.del(:roster_hash)
+      before { subject.redis.del(:roster_hash) }
+
+      describe 'when someone asks for the team roster' do
+        it 'lets the admins know that there is no roster' do
+          send_command('team', as: maester)
+          expect(replies.last).to eq(
+            'You must add some users to the team roster. '\
+            "You will need each member's slack handle and trello user name."
+          )
+        end
       end
-      it 'lets the admins know that there are no team roster' do
-        send_command('team', as: maester)
-        expect(replies.last).to eq(
-          'You must add some users to the team roster. '\
-          "You will need each member's slack handle and trello user name."
-        )
+
+      describe 'when someone triggers the interrupt' do
+        it 'lets the admins know that there is no roster' do
+          send_command('hey', as: jon)
+          expect(replies.last).to eq(
+            'You must add some users to the team roster. '\
+            "You will need each member's slack handle and trello user name."
+          )
+        end
       end
     end
 
@@ -279,7 +290,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when an admin requests to remove someone from the team roster' do
+    describe 'when an admin requests to remove someone from team roster' do
       it 'removes them' do
         send_command("remove @#{sam.id} ", as: maester)
         expect(replies.last)
@@ -290,7 +301,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when a non-admin requests to remove someone from the team roster' do
+    describe 'when a non-admin requests to remove someone from team roster' do
       it 'does not remove them' do
         send_command("remove @#{sam.id} ", as: jaime)
         expect(replies.last)
