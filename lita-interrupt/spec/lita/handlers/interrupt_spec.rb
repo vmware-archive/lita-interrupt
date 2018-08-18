@@ -284,7 +284,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command('add samwelltarley2 ', as: sam)
         expect(replies.last)
           .to eq(
-            %(I have linked trello user "samwelltarley2" (<@#{sam.id}>)!)
+            %(I have added trello user "samwelltarley2" (<@#{sam.id}>)!)
           )
         expect(redis_team_roster_hash).to eq(augmented_team_details)
       end
@@ -320,10 +320,10 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           .and_return(Trello::Member.new(new_sam_details))
       end
       it 'adds them' do
-        send_command("add samwelltarley2 @#{sam.id}", as: maester)
+        send_command("add samwelltarley2 (@#{sam.id})", as: maester)
         expect(replies.last)
           .to eq(
-            %(I have linked trello user "samwelltarley2" (<@#{sam.id}>)!)
+            %(I have added trello user "samwelltarley2" (<@#{sam.id}>)!)
           )
         expect(redis_team_roster_hash).to eq(augmented_team_details)
       end
@@ -340,7 +340,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command("add samwelltarley2 (@#{sam.id})", as: jaime)
         expect(replies.last)
           .to_not eq(
-            %(I have linked trello user "samwelltarley2" (<@#{sam.id}>)!)
+            %(I have added trello user "samwelltarley2" (<@#{sam.id}>)!)
           )
         expect(redis_team_roster_hash).to eq(team_details)
       end

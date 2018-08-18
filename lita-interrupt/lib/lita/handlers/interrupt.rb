@@ -33,10 +33,7 @@ module Lita
         super
 
         configure_trello
-        @admins = config.admins.map do |admin|
-          admin_user = Lita::User.create(admin)
-          Lita::Source.new(user: admin_user)
-        end
+        @admins = admin_lita_sources
         @team_roster = team_roster_hash
         @interrupt_card = team_interrupt_card if @team_roster
       end
@@ -47,11 +44,7 @@ module Lita
 
       def handle_list_team(response)
         return unless @team_roster ||= team_roster_hash
-        reply = +'The team roster is '
-        @team_roster.each do |key, val|
-          reply << "<@#{val}> => #{key}, "
-        end
-        response.reply(reply.gsub(/, $/, ''))
+        response.reply(generate_roster_response)
       end
 
       def handle_interrupt_mention(response)
@@ -61,28 +54,16 @@ module Lita
 
       def handle_interrupt_command(response)
         return unless @interrupt_card ||= team_interrupt_card
-        interrupt_ids = interrupt_pair
-        answer = +"<@#{interrupt_ids[0]}>"
-        if interrupt_ids.length > 1
-          interrupt_ids[1..-1].each { |name| answer << " <@#{name}>" }
-        end
-        answer << ": you have an interrupt from <@#{response.user.id}> ^^"
+        answer = generate_interrupt_response(response.user.id)
         response.reply(answer)
       end
 
       def handle_remove_from_team(response)
         match = response.match_data[1].to_s
-        trello_username = @team_roster.key(response.user.id)
-        slack_handle = response.user.id
-        unless match == 'me'
-          return unless @admins.find do |admin|
-            response.user.id == admin.user.id
-          end
-          slack_handle = match.gsub(/^@/, '')
-          trello_username = @team_roster.key(slack_handle)
+        unless (slack_handle = slack_handle_to_remove(match, response.user.id))
+          return
         end
-        @team_roster.delete(trello_username)
-        redis.set(:roster_hash, @team_roster.to_json)
+        trello_username = remove_from_team(slack_handle)
         response.reply(
           %(I have removed trello user "#{trello_username}" )\
           "(<@#{slack_handle}>)!"
@@ -91,31 +72,35 @@ module Lita
 
       def handle_add_to_team(response)
         trello_username = response.match_data[1].to_s
-        if response.match_data[2]
-          user_to_add = response.match_data[2].to_s
-                                .gsub(/^ *\(?@/, '').gsub(/^\)$/, '')
-          return unless @admins.find do |admin|
-            response.user.id == admin.user.id
-          end
-        end
-        unless (new_member = Trello::Member.find(trello_username))
+        unless lookup_trello_user(trello_username)
           response.reply(
             %(Did not find the trello username "#{trello_username}")
           )
-          return
         end
-        @team_roster ||= {}
-        @team_roster[trello_username] = user_to_add || response.user.id
-        redis.set(:roster_hash, @team_roster.to_json)
+        match = response.match_data[2]
+        slack_handle = slack_handle_to_add(match, response.user.id)
+        return unless slack_handle
+        add_to_team(trello_username, slack_handle)
         response.reply(
-          %(I have linked trello user "#{new_member.username}" )\
-          "(<@#{@team_roster[trello_username]}>)!"
+          %(I have added trello user "#{trello_username}" )\
+          "(<@#{slack_handle}>)!"
         )
       end
 
       Lita.register_handler(self)
 
       private
+
+      def admin_lita_sources
+        config.admins.map do |admin|
+          admin_user = Lita::User.create(admin)
+          Lita::Source.new(user: admin_user)
+        end
+      end
+
+      def admin?(user_id)
+        @admins.find { |admin| user_id == admin.user.id }
+      end
 
       def configure_trello
         Trello.configure do |c|
@@ -199,6 +184,59 @@ module Lita
         else
           interrupt_ids
         end
+      end
+
+      def generate_roster_response
+        reply = +'The team roster is '
+        @team_roster.each do |key, val|
+          reply << "<@#{val}> => #{key}, "
+        end
+        reply.gsub(/, $/, '')
+      end
+
+      def generate_interrupt_response(user)
+        interrupt_ids = interrupt_pair
+        answer = +"<@#{interrupt_ids[0]}>"
+        if interrupt_ids.length > 1
+          interrupt_ids[1..-1].each { |name| answer << " <@#{name}>" }
+        end
+        answer << ": you have an interrupt from <@#{user}> ^^"
+      end
+
+      def slack_handle_to_remove(match, requester_id)
+        return requester_id if match == 'me'
+        return match.gsub(/^@/, '') if admin?(requester_id)
+        nil
+      end
+
+      def slack_handle_to_add(match, requester_id)
+        if match
+          return nil unless admin?(requester_id)
+          return match.to_s.gsub(/^ *\(?@/, '').gsub(/\)$/, '')
+        end
+        requester_id
+      end
+
+      def lookup_trello_user(trello_username)
+        return true if Trello::Member.find(trello_username)
+        false
+      end
+
+      def update_redis
+        redis.set(:roster_hash, @team_roster.to_json)
+      end
+
+      def add_to_team(trello_username, slack_handle)
+        @team_roster ||= {}
+        @team_roster[trello_username] = slack_handle
+        update_redis
+      end
+
+      def remove_from_team(slack_handle)
+        trello_username = @team_roster.key(slack_handle)
+        @team_roster.delete(trello_username)
+        update_redis
+        trello_username
       end
     end
   end
