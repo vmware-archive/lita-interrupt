@@ -13,18 +13,14 @@ module Lita
       config :admins, required: true, type: Array
       attr_reader :admins, :team_roster, :interrupt_card
 
-      route(
-        /^add\s+(\S+)(\s+\(?@\S+\)?)?\s*$/,
-        :handle_add_to_team,
-        command: true
-      )
-      route(/^remove\s+(me|@\S+)\s*$/, :handle_remove_from_team, command: true)
-      route(/^part$/, :handle_part, command: true)
-      route(/^team$/, :handle_list_team, command: true)
-      route(/^(.*)$/, :handle_interrupt_command, command: true, exclusive: true)
+      route(/^add\s+(\S+)(\s+\(?@\S+\)?)?\s*$/, :add_to_team, command: true)
+      route(/^remove\s+(me|@\S+)\s*$/, :remove_from_team, command: true)
+      route(/^part$/, :part, command: true)
+      route(/^team$/, :list_team, command: true)
+      route(/^(.*)$/, :interrupt_command, command: true, exclusive: true)
       route(
         /^(.*)@(\S+)\s*(.*)$/,
-        :handle_interrupt_mention,
+        :interrupt_mention,
         command: false,
         exclusive: true
       )
@@ -38,52 +34,51 @@ module Lita
         @interrupt_card = team_interrupt_card if @team_roster
       end
 
-      def handle_part(response)
+      def part(response)
         robot.part(response.room)
       end
 
-      def handle_list_team(response)
+      def list_team(response)
         return unless @team_roster ||= team_roster_hash
         response.reply(generate_roster_response)
       end
 
-      def handle_interrupt_mention(response)
+      def interrupt_mention(response)
         matches = response.matches[0]
-        handle_interrupt_command(response) if matches[1] == robot.name
+        interrupt_command(response) if matches[1] == robot.name
       end
 
-      def handle_interrupt_command(response)
+      def interrupt_command(response)
         return unless @interrupt_card ||= team_interrupt_card
         answer = generate_interrupt_response(response.user.id)
         response.reply(answer)
       end
 
-      def handle_remove_from_team(response)
+      def remove_from_team(response)
         match = response.match_data[1].to_s
         unless (slack_handle = slack_handle_to_remove(match, response.user.id))
           return
         end
-        trello_username = remove_from_team(slack_handle)
+        trello_username = remove(slack_handle)
         response.reply(
-          %(I have removed trello user "#{trello_username}" )\
-          "(<@#{slack_handle}>)!"
+          %(Trello user "#{trello_username}" (<@#{slack_handle}>) removed!)
         )
       end
 
-      def handle_add_to_team(response)
+      def add_to_team(response)
         trello_username = response.match_data[1].to_s
         unless lookup_trello_user(trello_username)
           response.reply(
             %(Did not find the trello username "#{trello_username}")
           )
+          return
         end
         match = response.match_data[2]
         slack_handle = slack_handle_to_add(match, response.user.id)
         return unless slack_handle
-        add_to_team(trello_username, slack_handle)
+        add(trello_username, slack_handle)
         response.reply(
-          %(I have added trello user "#{trello_username}" )\
-          "(<@#{slack_handle}>)!"
+          %(Trello user "#{trello_username}" (<@#{slack_handle}>) added!)
         )
       end
 
@@ -222,20 +217,16 @@ module Lita
         false
       end
 
-      def update_redis
+      def add(trello_username, slack_handle)
+        @team_roster ||= {}
+        @team_roster[trello_username] = slack_handle
         redis.set(:roster_hash, @team_roster.to_json)
       end
 
-      def add_to_team(trello_username, slack_handle)
-        @team_roster ||= {}
-        @team_roster[trello_username] = slack_handle
-        update_redis
-      end
-
-      def remove_from_team(slack_handle)
+      def remove(slack_handle)
         trello_username = @team_roster.key(slack_handle)
         @team_roster.delete(trello_username)
-        update_redis
+        redis.set(:roster_hash, @team_roster.to_json)
         trello_username
       end
     end

@@ -165,6 +165,6 @@ def diminished_team_details
   {
     'jonsnow' => 'U1BSCLVQ1',
     'tyrionlannister' => 'U5062MBLE',
-    'jaimelannister' => 'U8FE4C6Z7',
+    'jaimelannister' => 'U8FE4C6Z7'
   }
 end

@@ -18,6 +18,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     let(:redis_team_roster_hash) do
       JSON.parse(subject.redis.get(:roster_hash))
     end
+
     before do
       registry.configure do |config|
         config.handlers.interrupt.trello_developer_public_key = ''
@@ -47,10 +48,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       allow_any_instance_of(Trello::Board)
         .to receive(:lists)
         .and_return([list, list_with_interrupt_card])
-      allow(Trello::List)
-        .to receive(:find)
-        .with(list.id)
-        .and_return(list)
+      allow(Trello::List).to receive(:find).with(list.id).and_return(list)
       allow(Trello::List)
         .to receive(:find)
         .with(list_with_interrupt_card.id)
@@ -76,9 +74,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       allow(interrupt_card)
         .to receive(:list)
         .and_return(list_with_interrupt_card)
-      allow(list)
-        .to receive(:cards)
-        .and_return([tyrion_card, jaime_card])
+      allow(list).to receive(:cards).and_return([tyrion_card, jaime_card])
       allow(list_with_interrupt_card)
         .to receive(:cards)
         .and_return([interrupt_card, tyrion_card, jaime_card])
@@ -86,37 +82,29 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     end
 
     it 'routes commands' do
-      is_expected.to route_command('hey').to(:handle_interrupt_command)
+      is_expected.to route_command('hey').to(:interrupt_command)
     end
 
     it 'routes generic mentions' do
       is_expected
         .to route(+"hey hey hey @#{robot.name} hello")
-        .to(:handle_interrupt_mention)
+        .to(:interrupt_mention)
     end
 
     it 'routes requests to be removed from a team' do
-      is_expected
-        .to route_command(+'remove  me')
-        .to(:handle_remove_from_team)
+      is_expected.to route_command(+'remove  me').to(:remove_from_team)
     end
 
     it 'routes requests to be added to a team' do
-      is_expected
-        .to route_command(+'add trello_user_123 ')
-        .to(:handle_add_to_team)
+      is_expected.to route_command(+'add trello_user_123 ').to(:add_to_team)
     end
 
     it 'routes requests to part' do
-      is_expected
-        .to route_command(+'part')
-        .to(:handle_part)
+      is_expected.to route_command(+'part').to(:part)
     end
 
     it 'routes requests to list team roster' do
-      is_expected
-        .to route_command(+'team')
-        .to(:handle_list_team)
+      is_expected.to route_command(+'team').to(:list_team)
     end
 
     describe 'when there are multiple interrupt cards' do
@@ -267,7 +255,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command('remove  me', as: sam)
         expect(replies.last)
           .to eq(
-            %(I have removed trello user "samwelltarley" (<@#{sam.id}>)!)
+            %(Trello user "samwelltarley" (<@#{sam.id}>) removed!)
           )
         expect(redis_team_roster_hash).to eq(diminished_team_details)
       end
@@ -284,7 +272,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command('add samwelltarley2 ', as: sam)
         expect(replies.last)
           .to eq(
-            %(I have added trello user "samwelltarley2" (<@#{sam.id}>)!)
+            %(Trello user "samwelltarley2" (<@#{sam.id}>) added!)
           )
         expect(redis_team_roster_hash).to eq(augmented_team_details)
       end
@@ -295,7 +283,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command("remove @#{sam.id} ", as: maester)
         expect(replies.last)
           .to eq(
-            %(I have removed trello user "samwelltarley" (<@#{sam.id}>)!)
+            %(Trello user "samwelltarley" (<@#{sam.id}>) removed!)
           )
         expect(redis_team_roster_hash).to eq(diminished_team_details)
       end
@@ -306,7 +294,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command("remove @#{sam.id} ", as: jaime)
         expect(replies.last)
           .to_not eq(
-            %(I have removed trello user "samwelltarley" (<@#{sam.id}>)!)
+            %(Trello user "samwelltarley" (<@#{sam.id}>) removed!)
           )
         expect(redis_team_roster_hash).to eq(team_details)
       end
@@ -323,7 +311,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command("add samwelltarley2 (@#{sam.id})", as: maester)
         expect(replies.last)
           .to eq(
-            %(I have added trello user "samwelltarley2" (<@#{sam.id}>)!)
+            %(Trello user "samwelltarley2" (<@#{sam.id}>) added!)
           )
         expect(redis_team_roster_hash).to eq(augmented_team_details)
       end
@@ -340,7 +328,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         send_command("add samwelltarley2 (@#{sam.id})", as: jaime)
         expect(replies.last)
           .to_not eq(
-            %(I have added trello user "samwelltarley2" (<@#{sam.id}>)!)
+            %(Trello user "samwelltarley2" (<@#{sam.id}>) added!)
           )
         expect(redis_team_roster_hash).to eq(team_details)
       end

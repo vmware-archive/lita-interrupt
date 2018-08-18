@@ -34,5 +34,4 @@ Lita.configure do |config|
     config.redis[:host] = ENV['REDIS_HOST']
     config.redis[:port] = ENV['REDIS_PORT'].to_i
   end
-
 end
