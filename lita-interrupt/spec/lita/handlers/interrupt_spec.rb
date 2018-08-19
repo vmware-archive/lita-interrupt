@@ -6,6 +6,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
   describe '#run' do
     let(:maester) { Lita::User.create('U9298ANLQ', name: 'maester_luwin') }
     let(:sam) { Lita::User.create('U93MFAV9V', name: 'sam') }
+    let(:arya) { Lita::User.create('U93FMA9VV', name: 'arya') }
     let(:jon) { Lita::User.create('U1BSCLVQ1', name: 'jon') }
     let(:tyrion) { Lita::User.create('U5062MBLE', name: 'tyrion') }
     let(:jaime) { Lita::User.create('U8FE4C6Z7', name: 'jaime') }
@@ -262,14 +263,14 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       before do
         allow(Trello::Member)
           .to receive(:find)
-          .with('samwelltarley2')
-          .and_return(Trello::Member.new(new_sam_details))
+          .with('aryastark')
+          .and_return(Trello::Member.new(arya_details))
       end
       it 'adds them' do
-        send_command('add samwelltarley2 ', as: sam)
+        send_command('add aryastark ', as: arya)
         expect(replies.last)
           .to eq(
-            %(Trello user "samwelltarley2" (<@#{sam.id}>) added!)
+            %(Trello user "aryastark" (<@#{arya.id}>) added!)
           )
         expect(redis_team_roster_hash).to eq(augmented_team_details)
       end
@@ -301,14 +302,14 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       before do
         allow(Trello::Member)
           .to receive(:find)
-          .with('samwelltarley2')
-          .and_return(Trello::Member.new(new_sam_details))
+          .with('aryastark')
+          .and_return(Trello::Member.new(arya_details))
       end
       it 'adds them' do
-        send_command("add samwelltarley2 (@#{sam.id})", as: maester)
+        send_command("add aryastark (@#{arya.id})", as: maester)
         expect(replies.last)
           .to eq(
-            %(Trello user "samwelltarley2" (<@#{sam.id}>) added!)
+            %(Trello user "aryastark" (<@#{arya.id}>) added!)
           )
         expect(redis_team_roster_hash).to eq(augmented_team_details)
       end
@@ -318,14 +319,14 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       before do
         allow(Trello::Member)
           .to receive(:find)
-          .with('samwelltarley2')
-          .and_return(Trello::Member.new(new_sam_details))
+          .with('aryastark')
+          .and_return(Trello::Member.new(arya_details))
       end
       it 'does not add them' do
-        send_command("add samwelltarley2 (@#{sam.id})", as: jaime)
+        send_command("add aryastark (@#{sam.id})", as: jaime)
         expect(replies.last)
           .to_not eq(
-            %(Trello user "samwelltarley2" (<@#{sam.id}>) added!)
+            %(Trello user "aryastark" (<@#{sam.id}>) added!)
           )
         expect(redis_team_roster_hash).to eq(team_details)
       end

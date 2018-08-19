@@ -40,16 +40,16 @@ def sam_details
   }
 end
 
-def new_sam_details
+def arya_details
   {
     'id'         => 'badce1f24357680913246578',
-    'fullName'   => 'Samwell Tarley',
-    'username'   => 'samwelltarley2',
-    'intials'    => 'ST',
+    'fullName'   => 'Arya Stark',
+    'username'   => 'aryastark',
+    'intials'    => 'AS',
     'avatarHash' => 'abcdef1234567890abcdef1234567890',
-    'bio'        => 'a rather famous user with a new username',
-    'url'        => 'https://trello.com/samwelltarley',
-    'email'      => 'samwelltarley@thewall.com'
+    'bio'        => 'a rather famous user',
+    'url'        => 'https://trello.com/aryastark',
+    'email'      => 'aryastark@thewall.com'
   }
 end
 
@@ -144,27 +144,27 @@ end
 
 def team_details
   {
-    'jonsnow' => 'U1BSCLVQ1',
-    'samwelltarley' => 'U93MFAV9V',
-    'tyrionlannister' => 'U5062MBLE',
-    'jaimelannister' => 'U8FE4C6Z7'
+    'U1BSCLVQ1' => 'jonsnow',
+    'U93MFAV9V' => 'samwelltarley',
+    'U5062MBLE' => 'tyrionlannister',
+    'U8FE4C6Z7' => 'jaimelannister'
   }
 end
 
 def augmented_team_details
   {
-    'jonsnow' => 'U1BSCLVQ1',
-    'samwelltarley' => 'U93MFAV9V',
-    'tyrionlannister' => 'U5062MBLE',
-    'jaimelannister' => 'U8FE4C6Z7',
-    'samwelltarley2' => 'U93MFAV9V'
+    'U1BSCLVQ1' => 'jonsnow',
+    'U93MFAV9V' => 'samwelltarley',
+    'U5062MBLE' => 'tyrionlannister',
+    'U8FE4C6Z7' => 'jaimelannister',
+    'U93FMA9VV' => 'aryastark'
   }
 end
 
 def diminished_team_details
   {
-    'jonsnow' => 'U1BSCLVQ1',
-    'tyrionlannister' => 'U5062MBLE',
-    'jaimelannister' => 'U8FE4C6Z7'
+    'U1BSCLVQ1' => 'jonsnow',
+    'U5062MBLE' => 'tyrionlannister',
+    'U8FE4C6Z7' => 'jaimelannister'
   }
 end

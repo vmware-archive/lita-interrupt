@@ -125,7 +125,7 @@ module Lita
       def team_trello_lists
         team_board = nil
         return unless @team_roster
-        @team_roster.each do |trello_username, _|
+        @team_roster.each do |_, trello_username|
           member = Trello::Member.find(trello_username)
           break if (team_board = member.boards.find do |board|
             board.name == config.board_name
@@ -167,24 +167,20 @@ module Lita
 
       def interrupt_pair
         interrupt_ids = []
-        interrupt_list = Trello::Card.find(@interrupt_card.id).list
-        interrupt_list.cards.each do |card|
+        cards = Trello::Card.find(@interrupt_card.id).list.cards
+        cards.each do |card|
           card.member_ids.each do |member|
-            username = Trello::Member.find(member).username
-            interrupt_ids << @team_roster[username]
+            trello_username = Trello::Member.find(member).username
+            interrupt_ids << @team_roster.key(trello_username)
           end
         end
-        if interrupt_ids.empty?
-          @team_roster.map { |_, val| val }
-        else
-          interrupt_ids
-        end
+        interrupt_ids.empty? ? @team_roster.keys : interrupt_ids
       end
 
       def generate_roster_response
         reply = +'The team roster is '
         @team_roster.each do |key, val|
-          reply << "<@#{val}> => #{key}, "
+          reply << "<@#{key}> => #{val}, "
         end
         reply.gsub(/, $/, '')
       end
@@ -219,13 +215,13 @@ module Lita
 
       def add(trello_username, slack_handle)
         @team_roster ||= {}
-        @team_roster[trello_username] = slack_handle
+        @team_roster[slack_handle] = trello_username
         redis.set(:roster_hash, @team_roster.to_json)
       end
 
       def remove(slack_handle)
-        trello_username = @team_roster.key(slack_handle)
-        @team_roster.delete(trello_username)
+        trello_username = @team_roster[slack_handle]
+        @team_roster.delete(slack_handle)
         redis.set(:roster_hash, @team_roster.to_json)
         trello_username
       end
