@@ -10,13 +10,39 @@ module Lita
       config :trello_developer_public_key, required: true, type: String
       config :trello_member_token, required: true, type: String
       config :board_name, required: true, type: String
-      config :admins, required: true, type: Array
       attr_reader :admins, :team_roster, :interrupt_card
 
-      route(/^add\s+(\S+)(\s+\(?@\S+\)?)?\s*$/, :add_to_team, command: true)
-      route(/^remove\s+(me|@\S+)\s*$/, :remove_from_team, command: true)
+      route(
+        /^\s*add\s+(me)\s+(\S+)\s*$/,
+        :add_to_team,
+        command: true,
+        help: { t('help.add_key') => t('help.add_value') }
+      )
+      route(
+        /^\s*add\s+(@\S+)\s+(\S+)\s*$/,
+        :add_to_team,
+        command: true,
+        restrict_to: :team
+      )
+      route(
+        /^\s*remove\s+(me)\s*$/,
+        :remove_from_team,
+        command: true,
+        help: { t('help.remove_key') => t('help.remove_value') }
+      )
+      route(
+        /^\s*remove\s+(@\S+)\s*$/,
+        :remove_from_team,
+        command: true,
+        restrict_to: :team
+      )
       route(/^part$/, :part, command: true, restrict_to: :team)
-      route(/^team$/, :list_team, command: true)
+      route(
+        /^team$/,
+        :list_team,
+        command: true,
+        help: { t('help.team_key') => t('help.team_value') }
+      )
       route(/^(.*)$/, :interrupt_command, command: true, exclusive: true)
       route(
         /^(.*)@(\S+)\s*(.*)$/,
@@ -55,10 +81,7 @@ module Lita
       end
 
       def remove_from_team(response)
-        match = response.match_data[1].to_s
-        unless (slack_handle = slack_handle_to_remove(match, response.user.id))
-          return
-        end
+        slack_handle = determine_slack_handle(response)
         trello_username = remove(slack_handle)
         response.reply(
           %(Trello user "#{trello_username}" (<@#{slack_handle}>) removed!)
@@ -66,16 +89,14 @@ module Lita
       end
 
       def add_to_team(response)
-        trello_username = response.match_data[1].to_s
+        slack_handle = determine_slack_handle(response)
+        trello_username = response.match_data[2].to_s
         unless lookup_trello_user(trello_username)
           response.reply(
             %(Did not find the trello username "#{trello_username}")
           )
           return
         end
-        match = response.match_data[2]
-        slack_handle = slack_handle_to_add(match, response.user.id)
-        return unless slack_handle
         add(trello_username, slack_handle)
         response.reply(
           %(Trello user "#{trello_username}" (<@#{slack_handle}>) added!)
@@ -86,21 +107,21 @@ module Lita
 
       private
 
-      def admin_lita_sources
-        config.admins.map do |admin|
-          admin_user = Lita::User.create(admin)
-          Lita::Source.new(user: admin_user)
-        end
-      end
-
-      def admin?(user_id)
-        @admins.find { |admin| user_id == admin.user.id }
-      end
-
       def configure_trello
         Trello.configure do |c|
           c.developer_public_key = config.trello_developer_public_key
           c.member_token = config.trello_member_token
+        end
+      end
+
+      def create_lita_source_from_id(id)
+        user = Lita::User.create(id)
+        Lita::Source.new(user: user)
+      end
+
+      def admin_lita_sources
+        robot.registry.config.robot.admins.map do |admin|
+          create_lita_source_from_id(admin)
         end
       end
 
@@ -117,9 +138,7 @@ module Lita
       end
 
       def notify_admins(msg)
-        @admins.each do |admin|
-          robot.send_messages(admin, msg)
-        end
+        @admins.each { |admin| robot.send_messages(admin, msg) }
       end
 
       def team_trello_lists
@@ -194,22 +213,16 @@ module Lita
         answer << ": you have an interrupt from <@#{user}> ^^"
       end
 
-      def slack_handle_to_remove(match, requester_id)
-        return requester_id if match == 'me'
-        return match.gsub(/^@/, '') if admin?(requester_id)
-        nil
-      end
-
-      def slack_handle_to_add(match, requester_id)
-        if match
-          return nil unless admin?(requester_id)
-          return match.to_s.gsub(/^ *\(?@/, '').gsub(/\)$/, '')
-        end
-        requester_id
+      def determine_slack_handle(response)
+        match = response.match_data[1].to_s
+        return match.to_s.gsub(/^@/, '') unless match == 'me'
+        response.user.id
       end
 
       def lookup_trello_user(trello_username)
-        return true if Trello::Member.find(trello_username)
+        Trello::Member.find(trello_username)
+        true
+      rescue Trello::Error
         false
       end
 

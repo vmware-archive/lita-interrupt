@@ -11,7 +11,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     let(:tyrion) { Lita::User.create('U5062MBLE', name: 'tyrion') }
     let(:jaime) { Lita::User.create('U8FE4C6Z7', name: 'jaime') }
     let(:list) { Trello::List.new(list_details) }
-    let(:list_with_interrupt_card) { Trello::List.new(interrupt_list_details) }
+    let(:interrupt_list) { Trello::List.new(interrupt_list_details) }
     let(:interrupt_card) { Trello::Card.new(interrupt_card_details) }
     let(:jaime_card) { Trello::Card.new(jaime_card_details) }
     let(:tyrion_card) { Trello::Card.new(tyrion_card_details) }
@@ -22,10 +22,10 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     before do
       registry.configure do |config|
+        config.robot.admins = [maester.id]
         config.handlers.interrupt.trello_developer_public_key = ''
         config.handlers.interrupt.trello_member_token = ''
         config.handlers.interrupt.board_name = board_name
-        config.handlers.interrupt.admins = [maester.id]
       end
       allow(Trello::Member)
         .to receive(:find)
@@ -48,12 +48,12 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         .and_return([Trello::Board.new(name: 'Game of Boards')])
       allow_any_instance_of(Trello::Board)
         .to receive(:lists)
-        .and_return([list, list_with_interrupt_card])
+        .and_return([list, interrupt_list])
       allow(Trello::List).to receive(:find).with(list.id).and_return(list)
       allow(Trello::List)
         .to receive(:find)
-        .with(list_with_interrupt_card.id)
-        .and_return(list_with_interrupt_card)
+        .with(interrupt_list.id)
+        .and_return(interrupt_list)
       allow(Trello::Card)
         .to receive(:find)
         .with(interrupt_card.id)
@@ -66,17 +66,11 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         .to receive(:find)
         .with(tyrion_card.id)
         .and_return(tyrion_card)
-      allow(tyrion_card)
-        .to receive(:list)
-        .and_return(list_with_interrupt_card)
-      allow(jaime_card)
-        .to receive(:list)
-        .and_return(list_with_interrupt_card)
-      allow(interrupt_card)
-        .to receive(:list)
-        .and_return(list_with_interrupt_card)
+      allow(tyrion_card).to receive(:list).and_return(interrupt_list)
+      allow(jaime_card).to receive(:list).and_return(interrupt_list)
+      allow(interrupt_card).to receive(:list).and_return(interrupt_list)
       allow(list).to receive(:cards).and_return([tyrion_card, jaime_card])
-      allow(list_with_interrupt_card)
+      allow(interrupt_list)
         .to receive(:cards)
         .and_return([interrupt_card, tyrion_card, jaime_card])
       subject.redis.set(:roster_hash, team_details.to_json)
@@ -88,7 +82,37 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     it { is_expected.to route_command(+'remove  me').to(:remove_from_team) }
 
-    it { is_expected.to route_command(+'add trello_user ').to(:add_to_team) }
+    it { is_expected.to route_command(+'team').to(:list_team) }
+
+    it do
+      is_expected.not_to route_command(+'remove @someone').to(:remove_from_team)
+    end
+
+    it do
+      is_expected
+        .to route_command(+'remove @someone')
+        .with_authorization_for(:team)
+        .to(:remove_from_team)
+    end
+
+    it do
+      is_expected
+        .to route_command(+'add me my_trello_name ')
+        .to(:add_to_team)
+    end
+
+    it do
+      is_expected
+        .not_to route_command(+'add @someone some_trello_user ')
+        .to(:add_to_team)
+    end
+
+    it do
+      is_expected
+        .to route_command(+'add @someone some_trello_user ')
+        .with_authorization_for(:team)
+        .to(:add_to_team)
+    end
 
     it { is_expected.not_to route_command(+'part').to(:part) }
 
@@ -98,8 +122,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         .with_authorization_for(:team)
         .to(:part)
     end
-
-    it { is_expected.to route_command(+'team').to(:list_team) }
 
     describe 'when there are multiple interrupt cards' do
       before do
@@ -127,7 +149,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           .and_return(interrupt_card)
         expect(interrupt_card)
           .to receive(:list)
-          .and_return(list_with_interrupt_card)
+          .and_return(interrupt_list)
         send_command('hey', as: maester)
       end
 
@@ -159,9 +181,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     describe 'when there is nobody on the interrupt list' do
       before do
-        allow(list_with_interrupt_card)
-          .to receive(:cards)
-          .and_return([interrupt_card])
+        allow(interrupt_list).to receive(:cards).and_return([interrupt_card])
       end
       it 'pings the whole team' do
         send_command('hello hello hello', as: maester)
@@ -200,7 +220,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when asked to leave a room' do
+    describe 'when asked to leave a room by a teammate' do
       before do
         robot.auth.add_user_to_group!(user, :team)
       end
@@ -267,7 +287,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           .and_return(Trello::Member.new(arya_details))
       end
       it 'adds them' do
-        send_command('add aryastark ', as: arya)
+        send_command('add me aryastark ', as: arya)
         expect(replies.last)
           .to eq(
             %(Trello user "aryastark" (<@#{arya.id}>) added!)
@@ -276,8 +296,9 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when an admin requests to remove someone from team roster' do
+    describe 'when a teammate requests to remove someone from roster' do
       it 'removes them' do
+        robot.auth.add_user_to_group!(maester, :team)
         send_command("remove @#{sam.id} ", as: maester)
         expect(replies.last)
           .to eq(
@@ -287,7 +308,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when a non-admin requests to remove someone from team roster' do
+    describe 'when a non-teammate requests to remove someone from roster' do
       it 'does not remove them' do
         send_command("remove @#{sam.id} ", as: jaime)
         expect(replies.last)
@@ -298,15 +319,16 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when an admin requests to add someone to the team roster' do
+    describe 'when a teammate requests to add someone to the team roster' do
       before do
+        robot.auth.add_user_to_group!(maester, :team)
         allow(Trello::Member)
           .to receive(:find)
           .with('aryastark')
           .and_return(Trello::Member.new(arya_details))
       end
       it 'adds them' do
-        send_command("add aryastark (@#{arya.id})", as: maester)
+        send_command("add @#{arya.id} aryastark", as: maester)
         expect(replies.last)
           .to eq(
             %(Trello user "aryastark" (<@#{arya.id}>) added!)
@@ -315,7 +337,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    describe 'when a non-admin requests to add someone to the team roster' do
+    describe 'when a non-teammate requests to add someone to the roster' do
       before do
         allow(Trello::Member)
           .to receive(:find)
@@ -323,10 +345,10 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           .and_return(Trello::Member.new(arya_details))
       end
       it 'does not add them' do
-        send_command("add aryastark (@#{sam.id})", as: jaime)
+        send_command("add @#{arya.id} aryastark", as: jaime)
         expect(replies.last)
           .to_not eq(
-            %(Trello user "aryastark" (<@#{sam.id}>) added!)
+            %(Trello user "aryastark" (<@#{arya.id}>) added!)
           )
         expect(redis_team_roster_hash).to eq(team_details)
       end

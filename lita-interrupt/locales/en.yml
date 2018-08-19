@@ -2,3 +2,10 @@ en:
   lita:
     handlers:
       interrupt:
+        help:
+          add_key: add me|@USER TRELLO_NAME
+          add_value: Add yourself or @USER to team roster with TRELLO_NAME (trello username). Requires auth group "team".
+          remove_key: remove me|@USER TRELLO_NAME
+          remove_value: Remove yourself or @USER from team roster. Requires auth group "team".
+          team_key: team
+          team_value: List teammates.
