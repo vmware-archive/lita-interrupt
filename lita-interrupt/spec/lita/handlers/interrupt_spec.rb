@@ -81,31 +81,24 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       subject.redis.set(:roster_hash, team_details.to_json)
     end
 
-    it 'routes commands' do
-      is_expected.to route_command('hey').to(:interrupt_command)
-    end
+    it { is_expected.to route_command('hey').to(:interrupt_command) }
 
-    it 'routes generic mentions' do
+    it { is_expected.to route(+"hi @#{robot.name} hey").to(:interrupt_mention) }
+
+    it { is_expected.to route_command(+'remove  me').to(:remove_from_team) }
+
+    it { is_expected.to route_command(+'add trello_user ').to(:add_to_team) }
+
+    it { is_expected.not_to route_command(+'part').to(:part) }
+
+    it do
       is_expected
-        .to route(+"hey hey hey @#{robot.name} hello")
-        .to(:interrupt_mention)
+        .to route_command(+'part')
+        .with_authorization_for(:team)
+        .to(:part)
     end
 
-    it 'routes requests to be removed from a team' do
-      is_expected.to route_command(+'remove  me').to(:remove_from_team)
-    end
-
-    it 'routes requests to be added to a team' do
-      is_expected.to route_command(+'add trello_user_123 ').to(:add_to_team)
-    end
-
-    it 'routes requests to part' do
-      is_expected.to route_command(+'part').to(:part)
-    end
-
-    it 'routes requests to list team roster' do
-      is_expected.to route_command(+'team').to(:list_team)
-    end
+    it { is_expected.to route_command(+'team').to(:list_team) }
 
     describe 'when there are multiple interrupt cards' do
       before do
@@ -207,6 +200,10 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     end
 
     describe 'when asked to leave a room' do
+      before do
+        robot.auth.add_user_to_group!(user, :team)
+      end
+
       it 'leaves the room' do
         room = Lita::Room.create_or_update('#this_example_room')
         expect(robot).to receive(:part).with(room)

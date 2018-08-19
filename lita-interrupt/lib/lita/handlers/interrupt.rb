@@ -15,7 +15,7 @@ module Lita
 
       route(/^add\s+(\S+)(\s+\(?@\S+\)?)?\s*$/, :add_to_team, command: true)
       route(/^remove\s+(me|@\S+)\s*$/, :remove_from_team, command: true)
-      route(/^part$/, :part, command: true)
+      route(/^part$/, :part, command: true, restrict_to: :team)
       route(/^team$/, :list_team, command: true)
       route(/^(.*)$/, :interrupt_command, command: true, exclusive: true)
       route(
