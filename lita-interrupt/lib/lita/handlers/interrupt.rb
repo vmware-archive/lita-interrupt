@@ -83,24 +83,18 @@ module Lita
       def remove_from_team(response)
         slack_handle = determine_slack_handle(response)
         trello_username = remove(slack_handle)
-        response.reply(
-          %(Trello user "#{trello_username}" (<@#{slack_handle}>) removed!)
-        )
+        response.reply(t('user_removed', t: trello_username, s: slack_handle))
       end
 
       def add_to_team(response)
         slack_handle = determine_slack_handle(response)
         trello_username = response.match_data[2].to_s
         unless lookup_trello_user(trello_username)
-          response.reply(
-            %(Did not find the trello username "#{trello_username}")
-          )
+          response.reply(t('user_not_found', t: trello_username))
           return
         end
         add(trello_username, slack_handle)
-        response.reply(
-          %(Trello user "#{trello_username}" (<@#{slack_handle}>) added!)
-        )
+        response.reply(t('user_added', t: trello_username, s: slack_handle))
       end
 
       Lita.register_handler(self)
@@ -128,10 +122,7 @@ module Lita
       def team_roster_hash
         team_roster = redis.get(:roster_hash)
         unless team_roster
-          notify_admins(
-            'You must add some users to the team roster. '\
-            "You will need each member's slack handle and trello user name."
-          )
+          notify_admins(t('add_users_to_roster'))
           return nil
         end
         JSON.parse(team_roster)
@@ -151,8 +142,7 @@ module Lita
           end)
         end
         unless team_board
-          notify_admins %(Trello team board "#{config.board_name}" not found! )\
-          'Set "TRELLO_BOARD_NAME" and restart me, please.'
+          notify_admins(t('board_not_found', b: config.board_name))
           return nil
         end
         team_board.lists
@@ -160,15 +150,10 @@ module Lita
 
       def validate_interrupt_cards(interrupt_cards)
         if interrupt_cards.empty?
-          notify_admins(
-            'Interrupt card not found! Your team '\
-            'trello board needs a list with a card titled "Interrupt".'
-          )
+          notify_admins(t('interrupt_card_not_found'))
           return nil
         elsif interrupt_cards.length > 1
-          notify_admins(
-            'Multiple interrupt cards found! Using first one.'
-          )
+          notify_admins(t('multiple_interrupt_cards'))
         end
         interrupt_cards[0]
       end
@@ -178,7 +163,7 @@ module Lita
         interrupt_cards = []
         team_lists.each do |list|
           Trello::List.find(list.id).cards.each do |card|
-            card.name == 'Interrupt' && interrupt_cards << card
+            card.name == t('interrupt_card') && interrupt_cards << card
           end
         end
         validate_interrupt_cards(interrupt_cards)
@@ -210,7 +195,7 @@ module Lita
         if interrupt_ids.length > 1
           interrupt_ids[1..-1].each { |name| answer << " <@#{name}>" }
         end
-        answer << ": you have an interrupt from <@#{user}> ^^"
+        answer << t('interrupt_suffix', u: user)
       end
 
       def determine_slack_handle(response)
