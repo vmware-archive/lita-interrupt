@@ -59,10 +59,12 @@ To run locally, remember to `bundle install` in the base directory for the main 
 
 An easy way to get your unique slack id is to start up the bot and look yourself up with the `users find` bot command. Comment out the `lita-interrupt` line from the `Gemfile` in the parent directory of this repo. Then run `bundle exec lita -c simple_lita_config.rb`. Keep in mind you will still need the non-Trello environment variables set except for `ROBOT_ADMINS`.
 
+ Issue this command to the bot: `users find MENTION_NAME` where `MENTION_NAME` is your slack handle without the `@` symbol.
+
 # setting up the team roster
 
 Once you have your unique slack id, start up the bot with that id in the `ROBOT_ADMINS` environment variable. Remember to put the `lita-interrupt` line back in the `Gemfile`. Then add yourself to the `team` authorization group by commanding the bot in a private channel: `auth add SLACK_ID team`.
 
-Then you can find the slack ids for the rest of your team with `users find MENTION_NAME` where `MENTION_NAME` is their slack handle without the `@` symbol. Finally add them to the `team` authorization group.
+Then you can find the slack ids for the rest of your team with `users find`. You can now add them to the `team` authorization group.
 
 At this point, anyone on the team can command the bot to add/remove teammates. Adding them requires knowledge of their Trello username. For example, `add @myteammmate trello_user123` associates your teammate with `trello_user123`. They can also add themselves with `add me trello_user123`. Removing is even easier: `remove @myteammate`, or `remove me`.
