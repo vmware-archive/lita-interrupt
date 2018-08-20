@@ -6,9 +6,7 @@ This is a plugin for [Lita](https://www.lita.io/) which can be used to [connect 
 
 This Lita handler can find your interrupt pair by talking to the Trello API. It requires a Trello API key from someone with access to a team Trello board. Simply add the interrupt engineers to a list containing a card titled 'Interrupt'. Also, team member cards should have the appropriate Trello 'Member' associated with it (initials will appear at the bottom-right corner of the card).
 
-You have to configure at least one admin. That admin can then add teammates to the Lita authorization group "team". You have to find out your unique slack id and supply it to the lita configuration. To find out your slack id, talk to an instance of the Lita bot and say `users find @YOUR_SLACK_NAME`. Also, say `help` to the bot for a list of commands.
-
-Below are instructions for configuring the bot via environment variables, using the provided `lita_config.rb`.
+You have to configure at least one admin. That admin can then add teammates to the Lita authorization group "team". You have to find out your unique slack id and supply it to the lita configuration. Details on how to do this are below, along with instructions for configuring the bot via environment variables, using the provided `lita_config.rb`.
 
 # set-up
 
@@ -59,7 +57,7 @@ To run locally, remember to `bundle install` in the base directory for the main 
 
 An easy way to get your unique slack id is to start up the bot and look yourself up with the `users find` bot command. Comment out the `lita-interrupt` line from the `Gemfile` in the parent directory of this repo. Then run `bundle exec lita -c simple_lita_config.rb`. Keep in mind you will still need the non-Trello environment variables set except for `ROBOT_ADMINS`.
 
- Issue this command to the bot: `users find MENTION_NAME` where `MENTION_NAME` is your slack handle without the `@` symbol.
+ Issue this command to the bot: `users find MENTION_NAME` where `MENTION_NAME` is your slack handle without the `@` symbol. Also, say `help` to the bot for a list of commands.
 
 # setting up the team roster
 
