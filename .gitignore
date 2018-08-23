@@ -18,3 +18,4 @@ tmp
 env.sh
 env.yaml
 cf-set-env.sh
+.idea/

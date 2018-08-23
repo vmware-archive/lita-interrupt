@@ -10,96 +10,111 @@ module Lita
       config :trello_developer_public_key, required: true, type: String
       config :trello_member_token, required: true, type: String
       config :board_name, required: true, type: String
-      attr_reader :admins, :team_roster, :interrupt_card
 
-      route(
-        /^\s*add\s+(me)\s+(\S+)\s*$/,
-        :add_to_team,
-        command: true,
-        help: { t('help.add_key') => t('help.add_value') }
-      )
-      route(
-        /^\s*add\s+(@\S+)\s+(\S+)\s*$/,
-        :add_to_team,
-        command: true,
-        restrict_to: :team
-      )
-      route(
-        /^\s*remove\s+(me)\s*$/,
-        :remove_from_team,
-        command: true,
-        help: { t('help.remove_key') => t('help.remove_value') }
-      )
-      route(
-        /^\s*remove\s+(@\S+)\s*$/,
-        :remove_from_team,
-        command: true,
-        restrict_to: :team
-      )
-      route(/^part$/, :part, command: true, restrict_to: :team)
-      route(
-        /^team$/,
-        :list_team,
-        command: true,
-        help: { t('help.team_key') => t('help.team_value') }
-      )
-      route(/^(.*)$/, :interrupt_command, command: true, exclusive: true)
-      route(
-        /^(.*)@(\S+)\s*(.*)$/,
-        :interrupt_mention,
-        command: false,
-        exclusive: true
-      )
+      on :loaded, :setup
 
-      def initialize(robot)
-        super
-
+      def setup(_payload)
+        define_routes(robot.registry.config.robot.name)
         configure_trello
-        @admins = admin_lita_sources
-        @team_roster = team_roster_hash
-        @interrupt_card = team_interrupt_card if @team_roster
-      end
-
-      def part(response)
-        robot.part(response.room)
+        check_team_roster
       end
 
       def list_team(response)
-        return unless @team_roster ||= team_roster_hash
         response.reply(generate_roster_response)
       end
 
-      def interrupt_mention(response)
-        matches = response.matches[0]
-        interrupt_command(response) if matches[1] == robot.name
-      end
-
-      def interrupt_command(response)
-        return unless @interrupt_card ||= team_interrupt_card
-        answer = generate_interrupt_response(response.user.id)
+      def interrupt(response)
+        return unless check_team_roster
+        return unless (interrupt_card = team_interrupt_card)
+        answer = generate_interrupt_response(response.user.id, interrupt_card)
         response.reply(answer)
       end
 
       def remove_from_team(response)
         slack_handle = determine_slack_handle(response)
-        trello_username = remove(slack_handle)
-        response.reply(t('user_removed', t: trello_username, s: slack_handle))
+        unless (trello_username = remove(slack_handle))
+          response.reply t('team_roster_is') + t('empty')
+          return
+        end
+        response.reply t('user_removed', t: trello_username, s: slack_handle)
       end
 
       def add_to_team(response)
         slack_handle = determine_slack_handle(response)
         trello_username = response.match_data[2].to_s
         unless lookup_trello_user(trello_username)
-          response.reply(t('user_not_found', t: trello_username))
+          response.reply t('user_not_found', t: trello_username)
           return
         end
         add(trello_username, slack_handle)
-        response.reply(t('user_added', t: trello_username, s: slack_handle))
+        response.reply t('user_added', t: trello_username, s: slack_handle)
       end
 
-      Lita.register_handler(self)
-
       private
+
+      def check_team_roster
+        unless team_roster
+          notify_admins t('add_users_to_roster')
+          return false
+        end
+        true
+      end
+
+      def define_routes(robot_name)
+        define_add_routes
+        define_remove_routes
+        define_list_team_route
+        define_interrupt_routes(robot_name)
+      end
+
+      def define_add_routes
+        self.class.route(
+          /^\s*add\s+(me)\s+(\S+)\s*$/,
+          :add_to_team,
+          command: true,
+          help: { t('help.add_key') => t('help.add_value') }
+        )
+        self.class.route(
+          /^\s*add\s+(@\S+)\s+(\S+)\s*$/,
+          :add_to_team,
+          command: true,
+          restrict_to: :team
+        )
+      end
+
+      def define_remove_routes
+        self.class.route(
+          /^\s*remove\s+(me)\s*$/,
+          :remove_from_team,
+          command: true,
+          help: { t('help.remove_key') => t('help.remove_value') }
+        )
+        self.class.route(
+          /^\s*remove\s+(@\S+)\s*$/,
+          :remove_from_team,
+          command: true,
+          restrict_to: :team
+        )
+      end
+
+      def define_list_team_route
+        self.class.route(
+          /^team$/,
+          :list_team,
+          command: true,
+          help: { t('help.team_key') => t('help.team_value') }
+        )
+      end
+
+      def define_interrupt_routes(robot_name)
+        self.class.route(/^(.*)$/, :interrupt, command: true, exclusive: true)
+        self.class.route(
+          /^(.*)@(#{robot_name})\s*(.*)$/,
+          :interrupt,
+          command: false,
+          exclusive: true
+        )
+      end
 
       def configure_trello
         Trello.configure do |c|
@@ -113,29 +128,24 @@ module Lita
         Lita::Source.new(user: user)
       end
 
-      def admin_lita_sources
-        robot.registry.config.robot.admins.map do |admin|
-          create_lita_source_from_id(admin)
-        end
-      end
-
-      def team_roster_hash
-        team_roster = redis.get(:roster_hash)
-        unless team_roster
-          notify_admins(t('add_users_to_roster'))
-          return nil
-        end
-        JSON.parse(team_roster)
-      end
-
       def notify_admins(msg)
-        @admins.each { |admin| robot.send_messages(admin, msg) }
+        robot.registry.config.robot.admins.each do |admin|
+          admin = create_lita_source_from_id(admin)
+          robot.send_messages(admin, msg)
+        end
+      end
+
+      def team_roster
+        roster = redis.get(:roster_hash)
+        roster_json = roster.nil? ? {} : JSON.parse(roster)
+        return nil if roster_json.empty?
+        roster_json
       end
 
       def team_trello_lists
         team_board = nil
-        return unless @team_roster
-        @team_roster.each do |_, trello_username|
+        return unless (roster = team_roster)
+        roster.each do |_, trello_username|
           member = Trello::Member.find(trello_username)
           break if (team_board = member.boards.find do |board|
             board.name == config.board_name
@@ -150,47 +160,54 @@ module Lita
 
       def validate_interrupt_cards(interrupt_cards)
         if interrupt_cards.empty?
-          notify_admins(t('interrupt_card_not_found'))
+          notify_admins t('interrupt_card_not_found')
           return nil
         elsif interrupt_cards.length > 1
-          notify_admins(t('multiple_interrupt_cards'))
+          notify_admins t('multiple_interrupt_cards')
         end
         interrupt_cards[0]
       end
 
       def team_interrupt_card
         return nil unless (team_lists = team_trello_lists)
+        if (interrupt_card = redis.get(:interrupt_card))
+          return interrupt_card
+        end
         interrupt_cards = []
         team_lists.each do |list|
           Trello::List.find(list.id).cards.each do |card|
-            card.name == t('interrupt_card') && interrupt_cards << card
+            card.name == t('interrupt_card') && interrupt_cards << card.id
           end
         end
         validate_interrupt_cards(interrupt_cards)
       end
 
-      def interrupt_pair
+      def interrupt_pair(interrupt_card)
         interrupt_ids = []
-        cards = Trello::Card.find(@interrupt_card.id).list.cards
+        roster = team_roster
+        cards = Trello::Card.find(interrupt_card).list.cards
         cards.each do |card|
           card.member_ids.each do |member|
             trello_username = Trello::Member.find(member).username
-            interrupt_ids << @team_roster.key(trello_username)
+            interrupt_ids << roster.key(trello_username)
           end
         end
-        interrupt_ids.empty? ? @team_roster.keys : interrupt_ids
+        interrupt_ids.empty? ? roster.keys : interrupt_ids
       end
 
       def generate_roster_response
-        reply = +'The team roster is '
-        @team_roster.each do |key, val|
+        reply = t('team_roster_is')
+        unless (roster = team_roster)
+          return reply << t('empty')
+        end
+        roster.each do |key, val|
           reply << "<@#{key}> => #{val}, "
         end
         reply.gsub(/, $/, '')
       end
 
-      def generate_interrupt_response(user)
-        interrupt_ids = interrupt_pair
+      def generate_interrupt_response(user, interrupt_card)
+        interrupt_ids = interrupt_pair(interrupt_card)
         answer = +"<@#{interrupt_ids[0]}>"
         if interrupt_ids.length > 1
           interrupt_ids[1..-1].each { |name| answer << " <@#{name}>" }
@@ -212,17 +229,23 @@ module Lita
       end
 
       def add(trello_username, slack_handle)
-        @team_roster ||= {}
-        @team_roster[slack_handle] = trello_username
-        redis.set(:roster_hash, @team_roster.to_json)
+        unless (roster = team_roster)
+          roster = {}
+          redis.set(:roster_hash, roster.to_json)
+        end
+        roster[slack_handle] = trello_username
+        redis.set(:roster_hash, roster.to_json)
       end
 
       def remove(slack_handle)
-        trello_username = @team_roster[slack_handle]
-        @team_roster.delete(slack_handle)
-        redis.set(:roster_hash, @team_roster.to_json)
+        return nil unless (roster = team_roster)
+        trello_username = roster[slack_handle]
+        roster.delete(slack_handle)
+        redis.set(:roster_hash, roster.to_json)
         trello_username
       end
+
+      Lita.register_handler(Interrupt)
     end
   end
 end

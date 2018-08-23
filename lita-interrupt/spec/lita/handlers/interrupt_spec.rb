@@ -3,7 +3,6 @@
 require 'spec_helper'
 
 describe Lita::Handlers::Interrupt, lita_handler: true do
-  let(:payload) { double(payload) }
   let(:maester) { Lita::User.create('U9298ANLQ', name: 'maester_luwin') }
   let(:sam) { Lita::User.create('U93MFAV9V', name: 'sam') }
   let(:arya) { Lita::User.create('U93FMA9VV', name: 'arya') }
@@ -16,8 +15,22 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
   let(:jaime_card) { Trello::Card.new(jaime_card_details) }
   let(:tyrion_card) { Trello::Card.new(tyrion_card_details) }
   let(:board_name) { 'Game of Boards' }
+  let(:empty_hash) { {} }
   let(:redis_team_roster_hash) do
     JSON.parse(subject.redis.get(:roster_hash))
+  end
+  let(:add_team_members) do
+    robot.auth.add_user_to_group!(maester, :team)
+    send_command("add @#{jon.id} jonsnow", as: maester)
+    send_command("add @#{sam.id} samwelltarley", as: maester)
+    send_command("add @#{tyrion.id} tyrionlannister", as: maester)
+    send_command("add @#{jaime.id} jaimelannister", as: maester)
+  end
+  let(:remove_team_members) do
+    send_command("remove @#{jon.id}", as: maester)
+    send_command("remove @#{sam.id}", as: maester)
+    send_command("remove @#{tyrion.id}", as: maester)
+    send_command("remove @#{jaime.id}", as: maester)
   end
 
   before do
@@ -73,13 +86,13 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
     allow(interrupt_list)
       .to receive(:cards)
       .and_return([interrupt_card, tyrion_card, jaime_card])
-    subject.redis.set(:roster_hash, team_details.to_json)
+    described_class.routes.clear
   end
 
   describe 'Routes:' do
-    it { is_expected.to route_command('hey').to(:interrupt_command) }
+    it { is_expected.to route_command('hey').to(:interrupt) }
 
-    it { is_expected.to route(+"hi @#{robot.name} hey").to(:interrupt_mention) }
+    it { is_expected.to route(+"hi @#{robot.name} hey").to(:interrupt) }
 
     it { is_expected.to route_command(+'remove  me').to(:remove_from_team) }
 
@@ -113,6 +126,8 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
   end
 
   describe 'Interruptions:' do
+    before { add_team_members }
+
     context 'when there are multiple interrupt cards,' do
       before do
         allow(list)
@@ -120,6 +135,7 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
           .and_return([interrupt_card, tyrion_card, jaime_card])
       end
       it 'alerts the admins and pings the interrupt pair' do
+        add_team_members
         send_command('hello hello hello', as: maester)
         expect(replies.last)
           .to eq(
@@ -210,30 +226,8 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
       end
     end
 
-    context 'when someone asks to get a list of the team roster,' do
-      it 'lists the team member slack handles and trello user names' do
-        send_command('team', as: maester)
-        expect(replies.last).to eq(
-          'The team roster is <@U1BSCLVQ1> => jonsnow, '\
-          '<@U93MFAV9V> => samwelltarley, '\
-          '<@U5062MBLE> => tyrionlannister, '\
-          '<@U8FE4C6Z7> => jaimelannister'
-        )
-      end
-    end
-
-    context 'when the redis store has no team roster,' do
-      before { subject.redis.del(:roster_hash) }
-
-      context 'when someone asks for the team roster,' do
-        it 'lets the admins know that there is no roster' do
-          send_command('team', as: maester)
-          expect(replies.last).to eq(
-            'You must add some users to the team roster. '\
-            "You will need each member's slack handle and trello user name."
-          )
-        end
-      end
+    context 'when there is no team roster,' do
+      before { remove_team_members }
 
       context 'when someone triggers the interrupt,' do
         it 'lets the admins know that there is no roster' do
@@ -248,6 +242,8 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
   end
 
   describe 'Removing team members:' do
+    before { add_team_members }
+
     context 'when someone requests to be removed from team roster,' do
       it 'removes them' do
         send_command('remove  me', as: sam)
@@ -281,9 +277,21 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         expect(redis_team_roster_hash).to eq(team_details)
       end
     end
+
+    context 'when the roster is empty and an authorized user removes someone' do
+      before { remove_team_members }
+
+      it 'gives a helpful message' do
+        send_command("remove @#{sam.id} ", as: maester)
+        expect(replies.last).to eq('The team roster is empty at the moment.')
+        expect(redis_team_roster_hash).to eq(empty_hash)
+      end
+    end
   end
 
   describe 'Adding team members:' do
+    before { add_team_members }
+
     context 'when someone requests to be added to team roster,' do
       before do
         allow(Trello::Member)
@@ -303,7 +311,6 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
 
     context 'when a teammate requests to add someone to the team roster,' do
       before do
-        robot.auth.add_user_to_group!(maester, :team)
         allow(Trello::Member)
           .to receive(:find)
           .with('aryastark')
@@ -335,12 +342,35 @@ describe Lita::Handlers::Interrupt, lita_handler: true do
         expect(redis_team_roster_hash).to eq(team_details)
       end
     end
+
+    context 'when someone tries to add a bogus trello user' do
+      before do
+        allow(Trello::Member)
+          .to receive(:find)
+          .with('aryasnark')
+          .and_raise(Trello::Error.new('400'))
+      end
+      it 'does not add them but gives a useful message' do
+        send_command("add @#{arya.id} aryasnark", as: maester)
+        expect(replies.last)
+          .to eq('Did not find the trello username "aryasnark"')
+        expect(redis_team_roster_hash).to eq(team_details)
+      end
+    end
   end
 
   describe 'Listing team roster:' do
-    context 'when someone asks for the team roster,' do
+    context 'when the roster is empty and someone asks for the team roster,' do
+      it 'notifies the user that the roster is empty' do
+        send_command('team')
+        expect(replies.last).to eq('The team roster is empty at the moment.')
+      end
+    end
+
+    context 'when roster is populated and someone asks for the team roster,' do
+      before { add_team_members }
       it 'lists the team member slack handles and trello user names' do
-        send_command('team', as: maester)
+        send_command('team')
         expect(replies.last).to eq(
           'The team roster is <@U1BSCLVQ1> => jonsnow, '\
           '<@U93MFAV9V> => samwelltarley, '\

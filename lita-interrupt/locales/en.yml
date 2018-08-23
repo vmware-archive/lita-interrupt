@@ -4,13 +4,15 @@ en:
       interrupt:
         user_removed: 'Trello user "%{t}" (<@%{s}>) removed!'
         user_added: 'Trello user "%{t}" (<@%{s}>) added!'
-        user_not_found: 'Did not find the trello username "#{t}"'
+        user_not_found: 'Did not find the trello username "%{t}"'
         add_users_to_roster: "You must add some users to the team roster. You will need each member's slack handle and trello user name."
         board_not_found: 'Trello team board "%{b}" not found! Set "TRELLO_BOARD_NAME" and restart me, please.'
         interrupt_card_not_found: 'Interrupt card not found! Your team trello board needs a list with a card titled "Interrupt".'
         multiple_interrupt_cards: 'Multiple interrupt cards found! Using first one.'
         interrupt_suffix: ': you have an interrupt from <@%{u}> ^^'
         interrupt_card: 'Interrupt'
+        team_roster_is: 'The team roster is '
+        empty: 'empty at the moment.'
         help:
           add_key: 'add me|@USER TRELLO_NAME'
           add_value: 'Add yourself or @USER to team roster with TRELLO_NAME (trello username). Requires auth group "team".'

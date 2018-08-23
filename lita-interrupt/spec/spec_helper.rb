@@ -103,6 +103,7 @@ end
 def interrupt_card_details
   {
     name:                   'Interrupt',
+    'id' =>                 'interrupt456789123456789',
     list_id:                'abcdef123456789123456789',
     desc:                   'This is the interrupt card',
     member_ids:             [],
@@ -117,6 +118,7 @@ end
 def tyrion_card_details
   {
     name:                   'Tyrion Lannister',
+    'id' =>                 'tyrion123456789123456789',
     list_id:                'abcdef123456789123456789',
     desc:                   'Tyrion Lannister personal card.',
     member_ids:             ['tyrionlannister'],
@@ -131,6 +133,7 @@ end
 def jaime_card_details
   {
     name:                   'Jaime Lannister',
+    'id' =>                 'jaime0123456789123456789',
     list_id:                'abcdef123456789123456789',
     desc:                   'Jaime Lannister personal card.',
     member_ids:             ['jaimelannister'],
