@@ -130,8 +130,8 @@ module Lita
 
       def notify_admins(msg)
         robot.registry.config.robot.admins.each do |admin|
-          admin = create_lita_source_from_id(admin)
-          robot.send_messages(admin, msg)
+          admin_source = create_lita_source_from_id(admin)
+          robot.send_messages(admin_source, msg)
         end
       end
 
