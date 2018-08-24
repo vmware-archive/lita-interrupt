@@ -147,12 +147,13 @@ module Lita
         return unless (roster = team_roster)
         roster.each do |_, trello_username|
           member = Trello::Member.find(trello_username)
-          break if (team_board = member.boards.find do |board|
+          team_board = member.boards.find do |board|
             board.name == config.board_name
-          end)
+          end
+          break if team_board
         end
         unless team_board
-          notify_admins(t('board_not_found', b: config.board_name))
+          notify_admins t('board_not_found', b: config.board_name)
           return nil
         end
         team_board.lists
