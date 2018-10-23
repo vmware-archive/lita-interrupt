@@ -22,7 +22,6 @@ Lita.configure do |config|
   config.handlers.interrupt.trello_member_token = ENV['TRELLO_MEMBER_TOKEN']
   config.handlers.interrupt.board_name = ENV['TRELLO_BOARD_NAME']
 
-
   if (vcap_services = ENV['VCAP_SERVICES'])
     rediscloud_service = JSON.parse(vcap_services)['rediscloud']
     credentials = rediscloud_service.first['credentials']

@@ -26,6 +26,7 @@ module Lita
       def interrupt(response)
         return unless check_team_roster
         return unless (interrupt_card = team_interrupt_card)
+
         answer = generate_interrupt_response(response.user.id, interrupt_card)
         response.reply(answer)
       end
@@ -139,12 +140,14 @@ module Lita
         roster = redis.get(:roster_hash)
         roster_json = roster.nil? ? {} : JSON.parse(roster)
         return nil if roster_json.empty?
+
         roster_json
       end
 
       def team_trello_lists
         team_board = nil
         return unless (roster = team_roster)
+
         roster.each do |_, trello_username|
           member = Trello::Member.find(trello_username)
           team_board = member.boards.find do |board|
@@ -174,6 +177,7 @@ module Lita
         if (interrupt_card = redis.get(:interrupt_card))
           return interrupt_card
         end
+
         interrupt_cards = []
         team_lists.each do |list|
           Trello::List.find(list.id).cards.each do |card|
@@ -201,6 +205,7 @@ module Lita
         unless (roster = team_roster)
           return reply << t('empty')
         end
+
         roster.each do |key, val|
           reply << "<@#{key}> => #{val}, "
         end
@@ -219,6 +224,7 @@ module Lita
       def determine_slack_handle(response)
         match = response.match_data[1].to_s
         return match.to_s.gsub(/^@/, '') unless match == 'me'
+
         response.user.id
       end
 
@@ -240,6 +246,7 @@ module Lita
 
       def remove(slack_handle)
         return nil unless (roster = team_roster)
+
         trello_username = roster[slack_handle]
         roster.delete(slack_handle)
         redis.set(:roster_hash, roster.to_json)
