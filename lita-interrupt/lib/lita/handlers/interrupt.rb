@@ -173,10 +173,10 @@ module Lita
       end
 
       def team_interrupt_card
-        return nil unless (team_lists = team_trello_lists)
         if (interrupt_card = redis.get(:interrupt_card))
           return interrupt_card
         end
+        return nil unless (team_lists = team_trello_lists)
 
         interrupt_cards = []
         team_lists.each do |list|
@@ -184,7 +184,9 @@ module Lita
             card.name == t('interrupt_card') && interrupt_cards << card.id
           end
         end
-        validate_interrupt_cards(interrupt_cards)
+        interrupt_card = validate_interrupt_cards(interrupt_cards)
+        redis.set(:interrupt_card, interrupt_card)
+        interrupt_card
       end
 
       def interrupt_pair(interrupt_card)
