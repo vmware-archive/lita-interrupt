@@ -1,5 +1,5 @@
 applications:
-- name: ((app_instance_name))
+- name: ((app_name))
   command: bundle exec lita
   disk_quota: 1G
   env:
