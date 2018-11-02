@@ -1,0 +1,19 @@
+applications:
+- name: ((app_instance_name))
+  command: bundle exec lita
+  disk_quota: 1G
+  env:
+    ADAPTERS_SLACK_TOKEN: ((adapters_slack_token))
+    ROBOT_ADMINS: ((robot_admins))
+    ROBOT_LOG_LEVEL: ((robot_debug_level))
+    ROBOT_NAME: ((robot_name))
+    TRELLO_BOARD_NAME: ((trello_board_name))
+    TRELLO_DEVELOPER_PUBLIC_KEY: ((trello_developer_public_key))
+    TRELLO_MEMBER_TOKEN: ((trello_member_token))
+  instances: 1
+  memory: 1G
+  routes:
+  - route: ((route))
+  services:
+  - ((redis-service-instance-name))
+  stack: cflinuxfs3
