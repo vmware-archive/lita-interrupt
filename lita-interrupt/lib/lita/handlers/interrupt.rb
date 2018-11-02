@@ -193,12 +193,22 @@ module Lita
         interrupt_ids = []
         roster = team_roster
         cards = Trello::Card.find(interrupt_card).list.cards
+
+        # cache a hash of trello member ids => usernames to avoid /members rate-limiting
+        trello_member_hash = redis.get(:trello_member_hash)
+        trello_member_hash = trello_member_hash.nil? ? {} : JSON.parse(trello_member_hash)
+
         cards.each do |card|
           card.member_ids.each do |member|
-            trello_username = Trello::Member.find(member).username
+            unless (trello_username = trello_member_hash[member])
+              trello_username = Trello::Member.find(member).username
+              trello_member_hash[member] = trello_username
+            end
             interrupt_ids << roster.key(trello_username)
           end
         end
+
+        redis.set(:trello_member_hash, trello_member_hash.to_json)
         interrupt_ids.empty? ? roster.keys : interrupt_ids
       end
 
