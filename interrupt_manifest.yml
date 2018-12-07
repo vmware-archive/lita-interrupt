@@ -15,5 +15,5 @@ applications:
   routes:
   - route: ((route))
   services:
-  - ((redis-service-instance-name))
+  - ((redis_service_instance_name))
   stack: cflinuxfs3
